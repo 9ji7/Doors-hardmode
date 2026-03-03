@@ -53,7 +53,7 @@ local Config = {
     DG_Footstep  = "rbxassetid://134645629051473",
     DG_Speed     = 22,
     DG_Chance    = 10,
-    DG_KillRange = 12,
+    DG_KillRange = 20,
     DG_Color     = Color3.fromRGB(80, 160, 80),
     DG_Hint      = "Олений Бог движется медленно, но неотступно. Прячься и не смотри назад.",
 
@@ -543,20 +543,21 @@ end
 local function SpawnDeerGod()
     if DG_Active then return end
     local path = GetRooms()
-    if #path < 2 then return end
+    if #path == 0 then return end
     DG_Active = true
 
-    local lastRoom = path[#path]
-    local startPos = GetRoomNode(lastRoom) + Vector3.new(0, 3, 0)
+    -- Спавнится с первой комнаты и идёт вперёд, как Common Sense
+    local startPos = GetRoomNode(path[1]) + Vector3.new(0, 3, 0)
 
     local ambSound = PlaySound(Config.DG_Ambient, 0, workspace, true, 0.2)
     TweenService:Create(ambSound, TweenInfo.new(4), { Volume = 6 }):Play()
 
-    local ent, bgui, img = CreateEntity(Config.DG_Name, Config.DG_Face, 6, startPos)
+    -- Размер 3 вместо 6 — не такой широкий
+    local ent, bgui, img = CreateEntity(Config.DG_Name, Config.DG_Face, 3, startPos)
 
     local smoke = Instance.new("Smoke", ent)
     smoke.Color        = Color3.fromRGB(60, 120, 60)
-    smoke.Size         = 20
+    smoke.Size         = 15
     smoke.Opacity      = 0.5
     smoke.RiseVelocity = 1.5
 
@@ -575,33 +576,15 @@ local function SpawnDeerGod()
         end
     end)
 
-    -- Chase player
+    -- Идёт вперёд по комнатам как обычная сущность
     task.spawn(function()
-        while ent and ent.Parent do
-            local char = LocalPlayer.Character
-            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local targetPos  = hrp.Position + Vector3.new(0, 3, 0)
-                local dist       = (ent.Position - targetPos).Magnitude
-                local travelTime = dist / Config.DG_Speed
-                TweenService:Create(ent, TweenInfo.new(travelTime, Enum.EasingStyle.Linear), {
-                    CFrame = CFrame.new(targetPos)
-                }):Play()
-            end
-            task.wait(0.5)
-        end
-    end)
-
-    -- Despawn after 90s
-    task.delay(90, function()
-        if ent and ent.Parent then
-            TweenService:Create(ambSound, TweenInfo.new(3), { Volume = 0 }):Play()
-            TweenService:Create(smoke,   TweenInfo.new(2), { Opacity = 0 }):Play()
-            task.wait(3)
-            ambSound:Stop()
-            ent:Destroy()
-            DG_Active = false
-        end
+        MoveAlongPath(ent, path, Config.DG_Speed, false)
+        TweenService:Create(ambSound, TweenInfo.new(3), { Volume = 0 }):Play()
+        TweenService:Create(smoke,   TweenInfo.new(2), { Opacity = 0 }):Play()
+        task.wait(3)
+        ambSound:Stop()
+        if ent.Parent then ent:Destroy() end
+        DG_Active = false
     end)
 end
 

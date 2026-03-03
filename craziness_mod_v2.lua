@@ -45,6 +45,18 @@ local Config = {
     RS_Color     = Color3.fromRGB(220, 30, 0),
     RS_Hint      = "Красная Улыбка видит тебя издалека, но стены — твоя защита!",
 
+    -- Deer God (🦌)
+    DG_Name      = "Deer God",
+    DG_Face      = "rbxthumb://type=Asset&id=12331751916&w=420&h=420",
+    DG_Jumpscare = "rbxthumb://type=Asset&id=11394027278&w=420&h=420",
+    DG_Ambient   = "rbxassetid://82890415629830",
+    DG_Footstep  = "rbxassetid://134645629051473",
+    DG_Speed     = 22,
+    DG_Chance    = 10,
+    DG_KillRange = 12,
+    DG_Color     = Color3.fromRGB(80, 160, 80),
+    DG_Hint      = "Олений Бог движется медленно, но неотступно. Прячься и не смотри назад.",
+
     -- Inverted Rebound (🌀)
     IR_Name    = "Inverted Rebound",
     IR_Face    = "rbxthumb://type=Asset&id=123816386090783&w=420&h=420",
@@ -106,18 +118,61 @@ local function UpdateScreenEffects(closestDist, closestName)
         TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(0.3), {
             TintColor = Color3.fromRGB(220, 180, 255)
         }):Play()
-    else
+    elseif closestName == Config.DG_Name then
         TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(0.3), {
-            TintColor = Color3.new(1,1,1)
+            TintColor = Color3.fromRGB(180, 255, 180)
         }):Play()
-    end
-end
+    else
 
 local function ClearScreenEffects()
     TweenService:Create(ScreenEffects.Blur,      TweenInfo.new(1), { Size = 0 }):Play()
     TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(1), {
         Saturation = 0, Brightness = 0, Contrast = 0, TintColor = Color3.new(1,1,1)
     }):Play()
+end
+
+-- Jumpscare Оленьего Бога — мигание между изображением и фиолетовым фоном
+local function DeerGodJumpscare()
+    local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+    sg.Name = "DeerGodJumpscare"
+    sg.IgnoreGuiInset = true
+    sg.ResetOnSpawn = false
+    sg.DisplayOrder = 999
+
+    local bg = Instance.new("Frame", sg)
+    bg.Size = UDim2.new(1,0,1,0)
+    bg.BorderSizePixel = 0
+    bg.BackgroundTransparency = 1
+
+    local img = Instance.new("ImageLabel", bg)
+    img.Size = UDim2.new(1,0,1,0)
+    img.Image = Config.DG_Jumpscare
+    img.BackgroundTransparency = 1
+    img.ScaleType = Enum.ScaleType.Fit
+
+    local purple = Instance.new("Frame", bg)
+    purple.Size = UDim2.new(1,0,1,0)
+    purple.BackgroundColor3 = Color3.fromRGB(80, 0, 120)
+    purple.BorderSizePixel = 0
+    purple.BackgroundTransparency = 1
+
+    -- Мигание: картинка ↔ фиолетовый фон, 1 секунда
+    task.spawn(function()
+        local endTime = tick() + 1.1
+        local show = true
+        while tick() < endTime do
+            if show then
+                img.ImageTransparency   = 0
+                purple.BackgroundTransparency = 1
+            else
+                img.ImageTransparency   = 1
+                purple.BackgroundTransparency = 0
+            end
+            show = not show
+            task.wait(0.1)
+        end
+        sg:Destroy()
+    end)
 end
 
 -- Jumpscare — белая вспышка
@@ -497,6 +552,81 @@ local function SpawnInvertedRebound(isFirst)
 end
 
 -- ============================================================
+-- SPAWN: DEER GOD 🦌
+-- ============================================================
+local DG_Active = false
+
+local function SpawnDeerGod()
+    if DG_Active then return end
+    local path = GetRooms()
+    if #path < 2 then return end
+    DG_Active = true
+
+    -- Спавнится за последней комнатой и идёт к игроку
+    local lastRoom = path[#path]
+    local startPos = GetRoomNode(lastRoom) + Vector3.new(0, 3, 0)
+
+    -- Тихий нарастающий звук появления
+    local ambSound = PlaySound(Config.DG_Ambient, 0, workspace, true, 0.2)
+    TweenService:Create(ambSound, TweenInfo.new(4), { Volume = 6 }):Play()
+
+    local ent, bgui, img = CreateEntity(Config.DG_Name, Config.DG_Face, Config.DG_Color, 6, startPos)
+
+    -- Зеленоватый туман
+    local smoke = Instance.new("Smoke", ent)
+    smoke.Color          = Color3.fromRGB(60, 120, 60)
+    smoke.Size           = 20
+    smoke.Opacity        = 0.5
+    smoke.RiseVelocity   = 1.5
+
+    -- Зелёные частицы
+    AddParticles(ent, Config.DG_Color, nil, 15)
+
+    -- Мягкий зелёный свет
+    local light = Instance.new("PointLight", ent)
+    light.Color      = Color3.fromRGB(100, 200, 100)
+    light.Range      = 40
+    light.Brightness = 5
+
+    -- Шаги с интервалом
+    task.spawn(function()
+        while ent and ent.Parent do
+            local step = PlaySound(Config.DG_Footstep, 4, ent, false, 0.2)
+            task.wait(1.1) -- медленные шаги
+        end
+    end)
+
+    -- Преследование: постоянно идёт к игроку, медленно
+    task.spawn(function()
+        while ent and ent.Parent do
+            local char = LocalPlayer.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local targetPos = hrp.Position + Vector3.new(0, 3, 0)
+                local dist      = (ent.Position - targetPos).Magnitude
+                local travelTime = dist / Config.DG_Speed
+                TweenService:Create(ent, TweenInfo.new(travelTime, Enum.EasingStyle.Linear), {
+                    CFrame = CFrame.new(targetPos)
+                }):Play()
+            end
+            task.wait(0.5) -- пересчёт направления каждые 0.5с
+        end
+    end)
+
+    -- Живёт 90 секунд или до смерти игрока
+    task.delay(90, function()
+        if ent and ent.Parent then
+            TweenService:Create(ambSound, TweenInfo.new(3), { Volume = 0 }):Play()
+            TweenService:Create(smoke,   TweenInfo.new(2), { Opacity = 0 }):Play()
+            task.wait(3)
+            ambSound:Stop()
+            ent:Destroy()
+            DG_Active = false
+        end
+    end)
+end
+
+-- ============================================================
 -- ЦИКЛ УРОНА + ЭФФЕКТЫ
 -- ============================================================
 task.spawn(function()
@@ -531,6 +661,8 @@ task.spawn(function()
                     TryShowHint(e.Name, Config.RS_Hint, Config.RS_Color)
                 elseif e.Name == Config.IR_Name then
                     TryShowHint(e.Name, Config.IR_Hint, Config.IR_Color)
+                elseif e.Name == Config.DG_Name then
+                    TryShowHint(e.Name, Config.DG_Hint, Config.DG_Color)
                 end
             end
 
@@ -548,6 +680,20 @@ task.spawn(function()
                     killed = true
                     hum:SetAttribute("DeathCause", e.Name)
                     hum.Health = 0
+                end
+            elseif e.Name == Config.DG_Name then
+                -- Deer God убивает при приближении, прятаться можно
+                if dist < Config.DG_KillRange and not isHiding and CanSeePlayer(e, char) then
+                    if not KillDebounce then
+                        KillDebounce = true
+                        killed = true
+                        DeerGodJumpscare()
+                        task.delay(0.5, function()
+                            hum:SetAttribute("DeathCause", e.Name)
+                            hum.Health = 0
+                        end)
+                        task.delay(3, function() KillDebounce = false end)
+                    end
                 end
             else
                 local range = (e.Name == Config.RS_Name) and Config.RS_KillRange or Config.KillRange
@@ -582,10 +728,7 @@ end)
 -- КОНТРОЛЛЕР СПАВНА
 -- ============================================================
 task.spawn(function()
-    local gameData  = ReplicatedStorage:WaitForChild("GameData", 15)
-    if not gameData then warn("[Craziness] GameData not found!") return end
-    local latestRoom = gameData:WaitForChild("LatestRoom", 10)
-    if not latestRoom then warn("[Craziness] LatestRoom not found!") return end
+    local latestRoom = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("LatestRoom")
 
     latestRoom.Changed:Connect(function(val)
         if val <= 5 then return end
@@ -609,14 +752,22 @@ task.spawn(function()
             end
         end
 
-        -- 🌑 Common Sense (независимый шанс)
+        -- 🦌 Deer God
+        if not DG_Active and RNG:NextInteger(1, 100) <= Config.DG_Chance then
+            task.spawn(function()
+                task.wait(2)
+                SpawnDeerGod()
+            end)
+        end
+
+        -- 🌑 Common Sense
         if RNG:NextInteger(1, 100) <= Config.CS_Chance then
             task.spawn(function()
                 SpawnCommonSense(5, val)
             end)
         end
 
-        -- 🔴 Red Smile (независимый шанс, задержка чтобы не наслаиваться)
+        -- 🔴 Red Smile
         if RNG:NextInteger(1, 100) <= Config.RS_Chance then
             task.spawn(function()
                 task.wait(1)
@@ -634,7 +785,8 @@ LocalPlayer.CharacterAdded:Connect(function()
     for _, e in ipairs(EntityFolder:GetChildren()) do e:Destroy() end
     IR_Counter = 0
     IR_Active  = false
+    DG_Active  = false
     HintCooldown = {}
 end)
 
-print("✅ Craziness Mod v2.0 loaded — Enhanced Effects Active! 🌑🔴🌀")
+print("✅ Craziness Mod v2.1 loaded — Deer God Added! 🌑🔴🌀🦌")

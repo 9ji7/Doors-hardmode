@@ -408,7 +408,7 @@ local function SpawnCommonSense(reboundCount, roomNum)
     task.wait(2.5)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
-    local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
+    local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 7, startPos)
     bgui.Size = UDim2.new(8, 0, 8, 0)
 
     local smoke = Instance.new("Smoke", ent)

@@ -101,7 +101,7 @@ task.spawn(function()
         return ReplicatedStorage:WaitForChild("GameData", 10)
     end)
     if ok and data then
-        local seedVal = data:FindFirstChild("Seed")
+        local seedVal = data:FindFirstChild("GameSeed")
         if seedVal then
             GameSeed = seedVal.Value
         end

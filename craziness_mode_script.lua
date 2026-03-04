@@ -799,7 +799,7 @@ task.spawn(function()
 
         -- Inverted Rebound
         if not IR_Active then
-            if RNG:NextInteger(1, 100) <= Config.IR_Chance then
+            if Random.new(val * 2 + 1):NextInteger(1, 100) <= Config.IR_Chance then
                 IR_Active  = true
                 IR_Counter = 0
             end
@@ -811,7 +811,7 @@ task.spawn(function()
         end
 
         -- Deer God
-        if not DG_Active and RNG:NextInteger(1, 100) <= Config.DG_Chance then
+        if not DG_Active and Random.new(val * 3 + 2):NextInteger(1, 100) <= Config.DG_Chance then
             task.spawn(function()
                 task.wait(2)
                 SpawnDeerGod()
@@ -821,16 +821,14 @@ task.spawn(function()
         -- Common Sense
         task.spawn(function()
             if val == 50 then
-                -- Специальный спавн на 50 комнате — 150 ребаундов
                 SpawnCommonSense(150, val)
-            elseif RNG:NextInteger(1, 100) <= Config.CS_Chance then
-                -- Натуральный спавн — 5 ребаундов
+            elseif Random.new(val * 4 + 5):NextInteger(1, 100) <= Config.CS_Chance then
                 SpawnCommonSense(5, val)
             end
         end)
 
-        -- POR-252-M
-        if RNG:NextInteger(1, 100) <= Config.PM_Chance then
+        -- POR-252-M (синхронизация через номер комнаты)
+        if Random.new(val * 7 + 3):NextInteger(1, 100) <= Config.PM_Chance then
             task.spawn(function()
                 task.wait(1.5)
                 SpawnPOR252M(Config.PM_Rebounds)
@@ -839,7 +837,7 @@ task.spawn(function()
 
         -- Red Smile
         task.spawn(function()
-            if RNG:NextInteger(1, 100) <= Config.RS_Chance then
+            if Random.new(val * 5 + 4):NextInteger(1, 100) <= Config.RS_Chance then
                 task.wait(1)
                 SpawnRedSmile(Config.RS_Rebounds, val)
             end

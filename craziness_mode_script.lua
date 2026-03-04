@@ -67,6 +67,19 @@ local Config = {
     IR_Color   = Color3.fromRGB(100, 0, 200),
     IR_Hint    = "Инверсия не терпит шкафов! Оставайся снаружи, пока реальность искажена.",
 
+    -- POR-252-M
+    PM_Name      = "POR-252-M",
+    PM_Face      = "rbxthumb://type=Asset&id=103247199803614&w=420&h=420",
+    PM_Warn      = "rbxassetid://139430154554631",
+    PM_Far       = "rbxassetid://140440238391729",
+    PM_Near      = "rbxassetid://137180766239401",
+    PM_Speed     = 175,
+    PM_Chance    = 5,
+    PM_Rebounds  = 20,
+    PM_KillRange = 45,
+    PM_Color     = Color3.fromRGB(0, 120, 255),
+    PM_Hint      = "POR-252-M движется с огромной скоростью. Спрячься немедленно!",
+
     KillRange       = 15,
     ShakeThreshold  = 60,
     HintThreshold   = 80,
@@ -117,6 +130,8 @@ local function UpdateScreenEffects(closestDist, closestName)
         tintColor = Color3.fromRGB(220, 180, 255)
     elseif closestName == Config.DG_Name then
         tintColor = Color3.fromRGB(180, 255, 180)
+    elseif closestName == Config.PM_Name then
+        tintColor = Color3.fromRGB(180, 200, 255)
     end
     TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(0.3), { TintColor = tintColor }):Play()
 end
@@ -408,7 +423,7 @@ local function SpawnCommonSense(reboundCount, roomNum)
     task.wait(2.5)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
-    local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 7, startPos)
+    local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
     bgui.Size = UDim2.new(8, 0, 8, 0)
 
     local smoke = Instance.new("Smoke", ent)
@@ -592,6 +607,89 @@ local function SpawnDeerGod()
 end
 
 -- ============================================================
+-- SPAWN: POR-252-M
+-- ============================================================
+local function SpawnPOR252M(reboundCount)
+    local path = GetRooms()
+    if #path == 0 then return end
+
+    -- Warning sound
+    PlaySound(Config.PM_Warn, 6, workspace)
+    task.wait(2)
+
+    local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
+    local ent, bgui, img = CreateEntity(Config.PM_Name, Config.PM_Face, 6, startPos)
+
+    -- Blue point light
+    local light = Instance.new("PointLight", ent)
+    light.Color      = Config.PM_Color
+    light.Range      = 70
+    light.Brightness = 15
+
+    -- Blue particles
+    AddParticles(ent, Config.PM_Color, 40)
+
+    -- Pulsing light
+    task.spawn(function()
+        while ent.Parent do
+            TweenService:Create(light, TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 25 }):Play()
+            task.wait(0.2)
+            TweenService:Create(light, TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 8 }):Play()
+            task.wait(0.2)
+        end
+    end)
+
+    -- Entity shakes while moving
+    task.spawn(function()
+        while ent and ent.Parent do
+            local offset = Vector3.new(
+                (math.random() - 0.5) * 1.5,
+                (math.random() - 0.5) * 1.5,
+                (math.random() - 0.5) * 1.5
+            )
+            ent.CFrame = ent.CFrame * CFrame.new(offset)
+            task.wait(0.05)
+        end
+    end)
+
+    local farSound = PlaySound(Config.PM_Far, 5, workspace, true)
+    local nearSound = PlaySound(Config.PM_Near, 0, ent, true)
+
+    task.spawn(function()
+        for _ = 1, reboundCount do
+            -- Forward
+            MoveAlongPath(ent, path, Config.PM_Speed, false)
+            if not ent.Parent then break end
+            -- Backward
+            MoveAlongPath(ent, path, Config.PM_Speed, true)
+            if not ent.Parent then break end
+        end
+        farSound:Stop()
+        nearSound:Stop()
+        if ent.Parent then ent:Destroy() end
+    end)
+
+    -- Near sound volume scales with proximity
+    task.spawn(function()
+        while ent and ent.Parent do
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local dist = (ent.Position - hrp.Position).Magnitude
+                local vol = math.clamp(1 - dist / 80, 0, 1) * 10
+                nearSound.Volume = vol
+                -- Camera shake scales with proximity too
+                if dist < Config.ShakeThreshold then
+                    local str = math.clamp((Config.ShakeThreshold - dist) / Config.ShakeThreshold * 1.2, 0, 1.2)
+                    shakeMag = math.max(shakeMag, str)
+                end
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- ============================================================
 -- DAMAGE LOOP + EFFECTS
 -- ============================================================
 task.spawn(function()
@@ -627,6 +725,8 @@ task.spawn(function()
                     TryShowHint(e.Name, Config.IR_Hint, Config.IR_Color)
                 elseif e.Name == Config.DG_Name then
                     TryShowHint(e.Name, Config.DG_Hint, Config.DG_Color)
+                elseif e.Name == Config.PM_Name then
+                    TryShowHint(e.Name, Config.PM_Hint, Config.PM_Color)
                 end
             end
 
@@ -659,7 +759,9 @@ task.spawn(function()
                     end
                 end
             else
-                local range = (e.Name == Config.RS_Name) and Config.RS_KillRange or Config.KillRange
+                local range = (e.Name == Config.RS_Name) and Config.RS_KillRange
+                    or (e.Name == Config.PM_Name) and Config.PM_KillRange
+                    or Config.KillRange
                 if dist < range and not isHiding and CanSeePlayer(e, char) then
                     if not KillDebounce then
                         KillDebounce = true
@@ -727,6 +829,14 @@ task.spawn(function()
             end
         end)
 
+        -- POR-252-M
+        if RNG:NextInteger(1, 100) <= Config.PM_Chance then
+            task.spawn(function()
+                task.wait(1.5)
+                SpawnPOR252M(Config.PM_Rebounds)
+            end)
+        end
+
         -- Red Smile
         task.spawn(function()
             if RNG:NextInteger(1, 100) <= Config.RS_Chance then
@@ -751,4 +861,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     HintCooldown = {}
 end)
 
-print("Craziness Mod v2.1 LOADED! 🌑🔴🌀🦌")
+print("Craziness Mod v2.2 LOADED! 🌑🔴🌀🦌💙")

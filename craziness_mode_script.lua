@@ -92,9 +92,27 @@ local Config = {
 local IR_Counter   = 0
 local IR_Active    = false
 local DG_Active    = false
-local gameSeed = ReplicatedStorage:WaitForChild("GameData"):WaitForChild("Seed", 10)
-local RNG = gameSeed and Random.new(gameSeed.Value) or Random.new()
 local KillDebounce = false
+
+-- Получаем Game Seed от Doors для синхронизации мультиплеера
+local GameSeed = 0
+task.spawn(function()
+    local ok, data = pcall(function()
+        return ReplicatedStorage:WaitForChild("GameData", 10)
+    end)
+    if ok and data then
+        local seedVal = data:FindFirstChild("Seed")
+        if seedVal then
+            GameSeed = seedVal.Value
+        end
+    end
+end)
+
+-- Функция которая даёт одинаковый результат у всех игроков
+-- на одной и той же комнате с одним и тем же seed
+local function SyncedRandom(roomVal, entityOffset)
+    return Random.new(GameSeed + roomVal * 100 + entityOffset):NextInteger(1, 100)
+end
 
 -- ============================================================
 -- SCREEN EFFECTS
@@ -792,7 +810,7 @@ task.spawn(function()
 
         -- Inverted Rebound
         if not IR_Active then
-            if Random.new(val * 2 + 1):NextInteger(1, 100) <= Config.IR_Chance then
+            if SyncedRandom(val, 1) <= Config.IR_Chance then
                 IR_Active  = true
                 IR_Counter = 0
             end
@@ -804,7 +822,7 @@ task.spawn(function()
         end
 
         -- Deer God
-        if not DG_Active and Random.new(val * 3 + 2):NextInteger(1, 100) <= Config.DG_Chance then
+        if not DG_Active and SyncedRandom(val, 2) <= Config.DG_Chance then
             task.spawn(function()
                 task.wait(2)
                 SpawnDeerGod()
@@ -815,13 +833,13 @@ task.spawn(function()
         task.spawn(function()
             if val == 50 then
                 SpawnCommonSense(150, val)
-            elseif Random.new(val * 4 + 5):NextInteger(1, 100) <= Config.CS_Chance then
+            elseif SyncedRandom(val, 3) <= Config.CS_Chance then
                 SpawnCommonSense(5, val)
             end
         end)
 
-        -- POR-252-M (синхронизация через номер комнаты)
-        if Random.new(val * 7 + 3):NextInteger(1, 100) <= Config.PM_Chance then
+        -- POR-252-M
+        if SyncedRandom(val, 4) <= Config.PM_Chance then
             task.spawn(function()
                 task.wait(1.5)
                 SpawnPOR252M(Config.PM_Rebounds)
@@ -830,7 +848,7 @@ task.spawn(function()
 
         -- Red Smile
         task.spawn(function()
-            if Random.new(val * 5 + 4):NextInteger(1, 100) <= Config.RS_Chance then
+            if SyncedRandom(val, 5) <= Config.RS_Chance then
                 task.wait(1)
                 SpawnRedSmile(Config.RS_Rebounds, val)
             end

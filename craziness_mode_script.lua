@@ -525,13 +525,6 @@ local function SpawnInvertedRebound(isFirst)
 
     AddParticles(ent, Config.IR_Color, 35)
 
-    local selBox = Instance.new("SelectionBox", ent)
-    selBox.Adornee             = ent
-    selBox.Color3              = Config.IR_Color
-    selBox.LineThickness       = 0.04
-    selBox.SurfaceTransparency = 0.8
-    selBox.SurfaceColor3       = Config.IR_Color
-
     task.spawn(function()
         while ent.Parent do
             TweenService:Create(bgui, TweenInfo.new(0.5, Enum.EasingStyle.Sine), { Size = UDim2.new(14, 0, 14, 0) }):Play()

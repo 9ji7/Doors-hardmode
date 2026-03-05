@@ -390,20 +390,30 @@ end
 -- ============================================================
 local function GetRooms()
     local rf = workspace:FindFirstChild("CurrentRooms")
-    if not rf then return {} end
+    if not rf then
+        warn("CRAZINESS MOD: CurrentRooms не найден в workspace!")
+        return {}
+    end
     local r = rf:GetChildren()
+    if #r == 0 then
+        warn("CRAZINESS MOD: CurrentRooms пустой!")
+        return {}
+    end
     table.sort(r, function(a, b)
         return (tonumber(a.Name) or 0) < (tonumber(b.Name) or 0)
     end)
+    print("CRAZINESS MOD: Найдено комнат: " .. #r .. " | Первая: " .. r[1].Name .. " | Последняя: " .. r[#r].Name)
     return r
 end
 
 local function GetRoomNode(room)
     local node = room:FindFirstChild("Door") or room:FindFirstChild("Nodes")
     if not node then
+        warn("CRAZINESS MOD: У комнаты " .. room.Name .. " нет Door/Nodes, используем PrimaryPart")
         return room.PrimaryPart and room.PrimaryPart.Position or Vector3.new()
     end
-    return node:IsA("Model") and node.PrimaryPart.Position or node.Position
+    local pos = node:IsA("Model") and node.PrimaryPart and node.PrimaryPart.Position or node.Position
+    return pos
 end
 
 -- ============================================================

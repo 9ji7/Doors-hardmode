@@ -370,6 +370,7 @@ local function CreateEntity(name, face, size, startPos)
     sp.CanCollide   = false
     sp.CastShadow   = false
     sp.CFrame       = CFrame.new(startPos)
+    sp.Massless     = true
 
     local weld = Instance.new("WeldConstraint", ent)
     weld.Part0 = ent
@@ -936,9 +937,12 @@ task.spawn(function()
     latestRoom.Changed:Connect(function(val)
         if val <= 5 then return end
 
+        -- На ранних комнатах шансы вдвое меньше
+        local earlyMult = (val < 15) and 0.5 or 1
+
         -- Inverted Rebound
         if not IR_Active then
-            if SyncedRandom(val, 1) <= Config.IR_Chance then
+            if SyncedRandom(val, 1) <= Config.IR_Chance * earlyMult then
                 IR_Active  = true
                 IR_Counter = 0
             end
@@ -950,33 +954,27 @@ task.spawn(function()
         end
 
         -- Deer God
-        if not DG_Active and SyncedRandom(val, 2) <= Config.DG_Chance then
-            task.spawn(function()
-                task.wait(2)
-                SpawnDeerGod()
-            end)
+        if not DG_Active and SyncedRandom(val, 2) <= Config.DG_Chance * earlyMult then
+            task.spawn(function() task.wait(2) SpawnDeerGod() end)
         end
 
         -- Common Sense
         task.spawn(function()
             if val == 50 then
                 SpawnCommonSense(150, val)
-            elseif SyncedRandom(val, 3) <= Config.CS_Chance then
+            elseif SyncedRandom(val, 3) <= Config.CS_Chance * earlyMult then
                 SpawnCommonSense(5, val)
             end
         end)
 
         -- POR-252-M
-        if SyncedRandom(val, 4) <= Config.PM_Chance then
-            task.spawn(function()
-                task.wait(1.5)
-                SpawnPOR252M(Config.PM_Rebounds)
-            end)
+        if SyncedRandom(val, 4) <= Config.PM_Chance * earlyMult then
+            task.spawn(function() task.wait(1.5) SpawnPOR252M(Config.PM_Rebounds) end)
         end
 
         -- Red Smile
         task.spawn(function()
-            if SyncedRandom(val, 5) <= Config.RS_Chance then
+            if SyncedRandom(val, 5) <= Config.RS_Chance * earlyMult then
                 task.wait(1)
                 SpawnRedSmile(Config.RS_Rebounds, val)
             end

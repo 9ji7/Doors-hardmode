@@ -554,15 +554,6 @@ local function SpawnRedSmile(reboundCount, roomNum)
 
     AddParticles(sp, Config.RS_Color, 30)
 
-    -- Тряска shakePart влево-вправо (не мешает движению mainPart)
-    task.spawn(function()
-        while ent and ent.Parent do
-            local tilt = math.rad((math.random()-0.5) * 25)
-            sp.CFrame = ent.CFrame * CFrame.Angles(0, 0, tilt)
-            task.wait(0.06)
-        end
-    end)
-
     task.spawn(function()
         while ent.Parent do
             TweenService:Create(light, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 20 }):Play()
@@ -620,16 +611,6 @@ local function SpawnInvertedRebound(isFirst)
     local ent, bgui, img, sp = CreateEntity(Config.IR_Name, Config.IR_Face, 5, startPos)
 
     AddParticles(sp, Config.IR_Color, 35)
-
-    -- Тряска shakePart во все стороны
-    task.spawn(function()
-        while ent and ent.Parent do
-            local rx = math.rad((math.random()-0.5) * 30)
-            local rz = math.rad((math.random()-0.5) * 30)
-            sp.CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
-            task.wait(0.05)
-        end
-    end)
 
     task.spawn(function()
         while ent.Parent do
@@ -772,16 +753,6 @@ local function SpawnPOR252M(reboundCount)
 
     -- Blue particles
     AddParticles(sp, Config.PM_Color, 40)
-
-    -- Тряска shakePart ЖЁСТКО во все стороны
-    task.spawn(function()
-        while ent and ent.Parent do
-            local rx = math.rad((math.random()-0.5) * 60)
-            local rz = math.rad((math.random()-0.5) * 60)
-            sp.CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
-            task.wait(0.02)
-        end
-    end)
 
     -- Pulsing light
     task.spawn(function()

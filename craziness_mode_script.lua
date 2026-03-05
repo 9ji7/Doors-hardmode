@@ -53,7 +53,7 @@ local Config = {
     DG_Footstep  = "rbxassetid://134645629051473",
     DG_Speed     = 22,
     DG_Chance    = 7,
-    DG_KillRange = 20,
+    DG_KillRange = 30,
     DG_Color     = Color3.fromRGB(80, 160, 80),
     DG_Hint      = "Олений Бог движется медленно, но неотступно. Прячься и не смотри назад.",
 
@@ -444,11 +444,22 @@ local function SpawnCommonSense(reboundCount, roomNum)
     local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
     bgui.Size = UDim2.new(8, 0, 8, 0)
 
-    local smoke = Instance.new("Smoke", ent)
-    smoke.Color        = Color3.new(0, 0, 0)
-    smoke.Size         = 30
-    smoke.Opacity      = 0.7
-    smoke.RiseVelocity = 3
+    -- Несколько слоёв дыма для густого эффекта на любой графике
+    local smokes = {}
+    local smokeSettings = {
+        {Size = 60, Opacity = 1,   RiseVelocity = 0},
+        {Size = 50, Opacity = 0.9, RiseVelocity = 1},
+        {Size = 45, Opacity = 1,   RiseVelocity = -1},
+        {Size = 55, Opacity = 0.9, RiseVelocity = 2},
+    }
+    for _, s in ipairs(smokeSettings) do
+        local smoke = Instance.new("Smoke", ent)
+        smoke.Color        = Color3.new(0, 0, 0)
+        smoke.Size         = s.Size
+        smoke.Opacity      = s.Opacity
+        smoke.RiseVelocity = s.RiseVelocity
+        smokes[#smokes + 1] = smoke
+    end
 
     AddParticles(ent, Config.CS_Color, 20)
 
@@ -460,7 +471,9 @@ local function SpawnCommonSense(reboundCount, roomNum)
             if not ent.Parent then break end
         end
         loop:Stop()
-        TweenService:Create(smoke, TweenInfo.new(1), { Opacity = 0 }):Play()
+        for _, sm in ipairs(smokes) do
+            TweenService:Create(sm, TweenInfo.new(1), { Opacity = 0 }):Play()
+        end
         task.wait(1)
         if ent.Parent then ent:Destroy() end
     end)
@@ -650,16 +663,16 @@ local function SpawnPOR252M(reboundCount)
         end
     end)
 
-    -- Entity shakes while moving
+    -- Entity shakes ЖЁСТКО пока летит
     task.spawn(function()
         while ent and ent.Parent do
             local offset = Vector3.new(
-                (math.random() - 0.5) * 1.5,
-                (math.random() - 0.5) * 1.5,
-                (math.random() - 0.5) * 1.5
+                (math.random() - 0.5) * 6,
+                (math.random() - 0.5) * 6,
+                (math.random() - 0.5) * 6
             )
             ent.CFrame = ent.CFrame * CFrame.new(offset)
-            task.wait(0.05)
+            task.wait(0.02)
         end
     end)
 
@@ -689,9 +702,9 @@ local function SpawnPOR252M(reboundCount)
                 local dist = (ent.Position - hrp.Position).Magnitude
                 local vol = math.clamp(1 - dist / 80, 0, 1) * 10
                 nearSound.Volume = vol
-                -- Camera shake scales with proximity too
-                if dist < Config.ShakeThreshold then
-                    local str = math.clamp((Config.ShakeThreshold - dist) / Config.ShakeThreshold * 1.2, 0, 1.2)
+                -- Экран трясётся жёстко с 100 студов
+                if dist < 100 then
+                    local str = math.clamp((100 - dist) / 100 * 2.5, 0, 2.5)
                     shakeMag = math.max(shakeMag, str)
                 end
             end

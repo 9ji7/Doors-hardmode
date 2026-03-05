@@ -298,11 +298,12 @@ local function ShowHint(text, color)
     end)
 end
 
+-- Показывает подсказку только ОДИН РАЗ за всю игру
+local HintShown = {}
 local function TryShowHint(name, text, color)
-    if HintCooldown[name] then return end
-    HintCooldown[name] = true
+    if HintShown[name] then return end
+    HintShown[name] = true
     ShowHint(text, color)
-    task.delay(20, function() HintCooldown[name] = nil end)
 end
 
 -- ============================================================
@@ -438,11 +439,13 @@ local function SpawnCommonSense(reboundCount, roomNum)
     if #path == 0 then return end
 
     PlaySound(Config.CS_Warn, 5, workspace)
+    TryShowHint(Config.CS_Name, Config.CS_Hint, Config.CS_Color)
     task.wait(2.5)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
     local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
-    bgui.Size = UDim2.new(8, 0, 8, 0)
+    bgui.Size = UDim2.new(12, 0, 12, 0)
+    bgui.AlwaysOnTop = true
 
     -- Несколько слоёв дыма для густого эффекта на любой графике
     local smokes = {}
@@ -487,6 +490,7 @@ local function SpawnRedSmile(reboundCount, roomNum)
     if #path == 0 then return end
 
     PlaySound(Config.RS_Far, 4, workspace)
+    TryShowHint(Config.RS_Name, Config.RS_Hint, Config.RS_Color)
     task.wait(1.5)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
@@ -539,6 +543,7 @@ local function SpawnInvertedRebound(isFirst)
 
     if isFirst then
         PlaySound(Config.IR_Arrival, 7, workspace)
+        TryShowHint(Config.IR_Name, Config.IR_Hint, Config.IR_Color)
         task.wait(5)
     else
         local ghost = Instance.new("Part", EntityFolder)
@@ -592,6 +597,7 @@ local function SpawnDeerGod()
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 1.5, 0)
 
     local ambSound = PlaySound(Config.DG_Ambient, 0, workspace, true, 0.2)
+    TryShowHint(Config.DG_Name, Config.DG_Hint, Config.DG_Color)
     TweenService:Create(ambSound, TweenInfo.new(4), { Volume = 6 }):Play()
 
     local ent, bgui, img = CreateEntity(Config.DG_Name, Config.DG_Face, 3, startPos)
@@ -639,6 +645,7 @@ local function SpawnPOR252M(reboundCount)
 
     -- Warning sound
     PlaySound(Config.PM_Warn, 6, workspace)
+    TryShowHint(Config.PM_Name, Config.PM_Hint, Config.PM_Color)
     task.wait(2)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
@@ -737,21 +744,6 @@ task.spawn(function()
             if dist < closestDist then
                 closestDist = dist
                 closestName = e.Name
-            end
-
-            -- Hints
-            if dist < Config.HintThreshold then
-                if e.Name == Config.CS_Name then
-                    TryShowHint(e.Name, Config.CS_Hint, Config.CS_Color)
-                elseif e.Name == Config.RS_Name then
-                    TryShowHint(e.Name, Config.RS_Hint, Config.RS_Color)
-                elseif e.Name == Config.IR_Name then
-                    TryShowHint(e.Name, Config.IR_Hint, Config.IR_Color)
-                elseif e.Name == Config.DG_Name then
-                    TryShowHint(e.Name, Config.DG_Hint, Config.DG_Color)
-                elseif e.Name == Config.PM_Name then
-                    TryShowHint(e.Name, Config.PM_Hint, Config.PM_Color)
-                end
             end
 
             -- Camera shake
@@ -881,6 +873,7 @@ LocalPlayer.CharacterAdded:Connect(function()
     IR_Active    = false
     DG_Active    = false
     HintCooldown = {}
+    HintShown    = {}
 end)
 
 print("Craziness Mod v2.2 LOADED! 🌑🔴🌀🦌💙")

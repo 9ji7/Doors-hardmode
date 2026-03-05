@@ -347,8 +347,11 @@ end
 
 -- ============================================================
 -- CREATE ENTITY HELPER
+-- mainPart — двигается по комнатам (невидимый)
+-- shakePart — трясётся, на нём billboard и эффекты
 -- ============================================================
 local function CreateEntity(name, face, size, startPos)
+    -- Основной Part — только для движения
     local ent = Instance.new("Part", EntityFolder)
     ent.Name         = name
     ent.Size         = Vector3.new(size, size, size)
@@ -358,16 +361,31 @@ local function CreateEntity(name, face, size, startPos)
     ent.CastShadow   = false
     ent.CFrame       = CFrame.new(startPos)
 
-    local bgui = Instance.new("BillboardGui", ent)
+    -- Shake Part — прикреплён к основному через Weld
+    local sp = Instance.new("Part", EntityFolder)
+    sp.Name         = name .. "_shake"
+    sp.Size         = Vector3.new(size, size, size)
+    sp.Transparency = 1
+    sp.Anchored     = false
+    sp.CanCollide   = false
+    sp.CastShadow   = false
+    sp.CFrame       = CFrame.new(startPos)
+
+    local weld = Instance.new("WeldConstraint", ent)
+    weld.Part0 = ent
+    weld.Part1 = sp
+
+    -- Billboard на shakePart
+    local bgui = Instance.new("BillboardGui", sp)
     bgui.Size        = UDim2.new(size * 2, 0, size * 2, 0)
     bgui.AlwaysOnTop = false
 
     local img = Instance.new("ImageLabel", bgui)
-    img.Size                  = UDim2.new(1, 0, 1, 0)
-    img.Image                 = face
+    img.Size                   = UDim2.new(1, 0, 1, 0)
+    img.Image                  = face
     img.BackgroundTransparency = 1
 
-    return ent, bgui, img
+    return ent, bgui, img, sp
 end
 
 -- ============================================================
@@ -409,11 +427,35 @@ end
 local function GetRoomNode(room)
     local node = room:FindFirstChild("Door") or room:FindFirstChild("Nodes")
     if not node then
-        warn("CRAZINESS MOD: У комнаты " .. room.Name .. " нет Door/Nodes, используем PrimaryPart")
-        return room.PrimaryPart and room.PrimaryPart.Position or Vector3.new()
+        warn("CRAZINESS MOD: У комнаты " .. room.Name .. " нет Door/Nodes")
+        -- Ищем любой BasePart внутри комнаты
+        for _, v in ipairs(room:GetDescendants()) do
+            if v:IsA("BasePart") then
+                return v.Position
+            end
+        end
+        return Vector3.new()
     end
-    local pos = node:IsA("Model") and node.PrimaryPart and node.PrimaryPart.Position or node.Position
-    return pos
+    if node:IsA("Model") then
+        if node.PrimaryPart then
+            return node.PrimaryPart.Position
+        else
+            warn("CRAZINESS MOD: " .. room.Name .. "/" .. node.Name .. " Model без PrimaryPart")
+            for _, v in ipairs(node:GetDescendants()) do
+                if v:IsA("BasePart") then return v.Position end
+            end
+            return Vector3.new()
+        end
+    end
+    if node:IsA("BasePart") then
+        return node.Position
+    end
+    -- Folder или что-то другое — ищем первый BasePart внутри
+    for _, v in ipairs(node:GetDescendants()) do
+        if v:IsA("BasePart") then return v.Position end
+    end
+    warn("CRAZINESS MOD: Не удалось найти позицию для " .. room.Name)
+    return Vector3.new()
 end
 
 -- ============================================================
@@ -453,11 +495,10 @@ local function SpawnCommonSense(reboundCount, roomNum)
     task.wait(2.5)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
-    local ent, bgui, img = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
+    local ent, bgui, img, sp = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
     bgui.Size = UDim2.new(12, 0, 12, 0)
     bgui.AlwaysOnTop = true
 
-    -- Несколько слоёв дыма для густого эффекта на любой графике
     local smokes = {}
     local smokeSettings = {
         {Size = 60, Opacity = 1,   RiseVelocity = 0},
@@ -466,7 +507,7 @@ local function SpawnCommonSense(reboundCount, roomNum)
         {Size = 55, Opacity = 0.9, RiseVelocity = 2},
     }
     for _, s in ipairs(smokeSettings) do
-        local smoke = Instance.new("Smoke", ent)
+        local smoke = Instance.new("Smoke", sp)
         smoke.Color        = Color3.new(0, 0, 0)
         smoke.Size         = s.Size
         smoke.Opacity      = s.Opacity
@@ -474,9 +515,8 @@ local function SpawnCommonSense(reboundCount, roomNum)
         smokes[#smokes + 1] = smoke
     end
 
-    AddParticles(ent, Config.CS_Color, 20)
-
-    local loop = PlaySound(Config.CS_Fly, 8, ent, true)
+    AddParticles(sp, Config.CS_Color, 20)
+    local loop = PlaySound(Config.CS_Fly, 8, sp, true)
 
     task.spawn(function()
         for _ = 1, reboundCount do
@@ -504,22 +544,20 @@ local function SpawnRedSmile(reboundCount, roomNum)
     task.wait(1.5)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
-    local ent, bgui, img = CreateEntity(Config.RS_Name, Config.RS_Face, 6, startPos)
+    local ent, bgui, img, sp = CreateEntity(Config.RS_Name, Config.RS_Face, 6, startPos)
 
-    local light = Instance.new("PointLight", ent)
+    local light = Instance.new("PointLight", sp)
     light.Color      = Config.RS_Color
     light.Range      = 60
     light.Brightness = 12
 
-    AddParticles(ent, Config.RS_Color, 30)
+    AddParticles(sp, Config.RS_Color, 30)
 
-    -- Тряска через поворот Part (средняя, влево-вправо)
+    -- Тряска shakePart влево-вправо (не мешает движению mainPart)
     task.spawn(function()
         while ent and ent.Parent do
             local tilt = math.rad((math.random()-0.5) * 25)
-            TweenService:Create(ent, TweenInfo.new(0.06, Enum.EasingStyle.Linear), {
-                CFrame = ent.CFrame * CFrame.Angles(0, 0, tilt)
-            }):Play()
+            sp.CFrame = ent.CFrame * CFrame.Angles(0, 0, tilt)
             task.wait(0.06)
         end
     end)
@@ -578,18 +616,16 @@ local function SpawnInvertedRebound(isFirst)
         task.wait(2)
     end
 
-    local ent, bgui, img = CreateEntity(Config.IR_Name, Config.IR_Face, 5, startPos)
+    local ent, bgui, img, sp = CreateEntity(Config.IR_Name, Config.IR_Face, 5, startPos)
 
-    AddParticles(ent, Config.IR_Color, 35)
+    AddParticles(sp, Config.IR_Color, 35)
 
-    -- Тряска через поворот Part во все стороны (агрессивная)
+    -- Тряска shakePart во все стороны
     task.spawn(function()
         while ent and ent.Parent do
             local rx = math.rad((math.random()-0.5) * 30)
             local rz = math.rad((math.random()-0.5) * 30)
-            TweenService:Create(ent, TweenInfo.new(0.05, Enum.EasingStyle.Linear), {
-                CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
-            }):Play()
+            sp.CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
             task.wait(0.05)
         end
     end)
@@ -603,7 +639,7 @@ local function SpawnInvertedRebound(isFirst)
         end
     end)
 
-    local loop = PlaySound(Config.IR_Move, 10, ent, true, 1.2)
+    local loop = PlaySound(Config.IR_Move, 10, sp, true, 1.2)
     local echo = Instance.new("EchoSoundEffect", loop)
     echo.Delay    = 0.12
     echo.Feedback = 0.25
@@ -633,18 +669,18 @@ local function SpawnDeerGod()
     TryShowHint(Config.DG_Name, Config.DG_Hint, Config.DG_Color)
     TweenService:Create(ambSound, TweenInfo.new(4), { Volume = 6 }):Play()
 
-    local ent, bgui, img = CreateEntity(Config.DG_Name, Config.DG_Face, 3, startPos)
-    bgui.Size = UDim2.new(5, 0, 7, 0) -- чуть выше чем шире
+    local ent, bgui, img, sp = CreateEntity(Config.DG_Name, Config.DG_Face, 3, startPos)
+    bgui.Size = UDim2.new(5, 0, 7, 0)
 
-    local smoke = Instance.new("Smoke", ent)
+    local smoke = Instance.new("Smoke", sp)
     smoke.Color        = Color3.fromRGB(60, 120, 60)
     smoke.Size         = 15
     smoke.Opacity      = 0.5
     smoke.RiseVelocity = 1.5
 
-    AddParticles(ent, Config.DG_Color, 15)
+    AddParticles(sp, Config.DG_Color, 15)
 
-    local light = Instance.new("PointLight", ent)
+    local light = Instance.new("PointLight", sp)
     light.Color      = Color3.fromRGB(100, 200, 100)
     light.Range      = 40
     light.Brightness = 5
@@ -695,7 +731,7 @@ local function SpawnDeerGod()
     -- Footsteps
     task.spawn(function()
         while ent and ent.Parent do
-            PlaySound(Config.DG_Footstep, 4, ent, false, 0.2)
+            PlaySound(Config.DG_Footstep, 4, sp, false, 0.2)
             task.wait(1.1)
         end
     end)
@@ -725,16 +761,26 @@ local function SpawnPOR252M(reboundCount)
     task.wait(2)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
-    local ent, bgui, img = CreateEntity(Config.PM_Name, Config.PM_Face, 6, startPos)
+    local ent, bgui, img, sp = CreateEntity(Config.PM_Name, Config.PM_Face, 6, startPos)
 
     -- Blue point light
-    local light = Instance.new("PointLight", ent)
+    local light = Instance.new("PointLight", sp)
     light.Color      = Config.PM_Color
     light.Range      = 70
     light.Brightness = 15
 
     -- Blue particles
-    AddParticles(ent, Config.PM_Color, 40)
+    AddParticles(sp, Config.PM_Color, 40)
+
+    -- Тряска shakePart ЖЁСТКО во все стороны
+    task.spawn(function()
+        while ent and ent.Parent do
+            local rx = math.rad((math.random()-0.5) * 60)
+            local rz = math.rad((math.random()-0.5) * 60)
+            sp.CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
+            task.wait(0.02)
+        end
+    end)
 
     -- Pulsing light
     task.spawn(function()
@@ -746,20 +792,8 @@ local function SpawnPOR252M(reboundCount)
         end
     end)
 
-    -- Entity shakes ЖЁСТКО через поворот Part во все стороны
-    task.spawn(function()
-        while ent and ent.Parent do
-            local rx = math.rad((math.random()-0.5) * 60)
-            local rz = math.rad((math.random()-0.5) * 60)
-            TweenService:Create(ent, TweenInfo.new(0.02, Enum.EasingStyle.Linear), {
-                CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
-            }):Play()
-            task.wait(0.02)
-        end
-    end)
-
     local farSound = PlaySound(Config.PM_Far, 5, workspace, true)
-    local nearSound = PlaySound(Config.PM_Near, 0, ent, true)
+    local nearSound = PlaySound(Config.PM_Near, 0, sp, true)
 
     task.spawn(function()
         for _ = 1, reboundCount do

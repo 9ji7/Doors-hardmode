@@ -498,7 +498,7 @@ local function SpawnCommonSense(reboundCount, roomNum)
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
     local ent, bgui, img, sp = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
     bgui.Size = UDim2.new(12, 0, 12, 0)
-    bgui.AlwaysOnTop = true
+    bgui.AlwaysOnTop = false
 
     local smokes = {}
     local smokeSettings = {

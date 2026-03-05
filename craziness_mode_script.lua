@@ -503,6 +503,17 @@ local function SpawnRedSmile(reboundCount, roomNum)
 
     AddParticles(ent, Config.RS_Color, 30)
 
+    -- Тряска через поворот Part (средняя, влево-вправо)
+    task.spawn(function()
+        while ent and ent.Parent do
+            local tilt = math.rad((math.random()-0.5) * 25)
+            TweenService:Create(ent, TweenInfo.new(0.06, Enum.EasingStyle.Linear), {
+                CFrame = ent.CFrame * CFrame.Angles(0, 0, tilt)
+            }):Play()
+            task.wait(0.06)
+        end
+    end)
+
     task.spawn(function()
         while ent.Parent do
             TweenService:Create(light, TweenInfo.new(0.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 20 }):Play()
@@ -561,6 +572,18 @@ local function SpawnInvertedRebound(isFirst)
 
     AddParticles(ent, Config.IR_Color, 35)
 
+    -- Тряска через поворот Part во все стороны (агрессивная)
+    task.spawn(function()
+        while ent and ent.Parent do
+            local rx = math.rad((math.random()-0.5) * 30)
+            local rz = math.rad((math.random()-0.5) * 30)
+            TweenService:Create(ent, TweenInfo.new(0.05, Enum.EasingStyle.Linear), {
+                CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
+            }):Play()
+            task.wait(0.05)
+        end
+    end)
+
     task.spawn(function()
         while ent.Parent do
             TweenService:Create(bgui, TweenInfo.new(0.5, Enum.EasingStyle.Sine), { Size = UDim2.new(14, 0, 14, 0) }):Play()
@@ -616,6 +639,49 @@ local function SpawnDeerGod()
     light.Range      = 40
     light.Brightness = 5
 
+    -- Afterimage: каждые 0.3с спавним полупрозрачный клон который исчезает
+    task.spawn(function()
+        while ent and ent.Parent do
+            task.wait(0.3)
+            if not ent.Parent then break end
+            local ghost = Instance.new("Part", EntityFolder)
+            ghost.Name             = "DG_Ghost"
+            ghost.Size             = ent.Size
+            ghost.Anchored         = true
+            ghost.CanCollide       = false
+            ghost.CastShadow       = false
+            ghost.Transparency     = 0.5
+            ghost.Color            = Color3.fromRGB(80, 160, 80)
+            ghost.Material         = Enum.Material.Neon
+            ghost.CFrame           = ent.CFrame
+            local gb = Instance.new("BillboardGui", ghost)
+            gb.Size = bgui.Size
+            local gi = Instance.new("ImageLabel", gb)
+            gi.Size = UDim2.new(1,0,1,0)
+            gi.Image = Config.DG_Face
+            gi.BackgroundTransparency = 1
+            gi.ImageTransparency = 0.6
+            -- Затухает и исчезает
+            TweenService:Create(ghost, TweenInfo.new(0.5), { Transparency = 1 }):Play()
+            TweenService:Create(gi,    TweenInfo.new(0.5), { ImageTransparency = 1 }):Play()
+            Debris:AddItem(ghost, 0.6)
+        end
+    end)
+
+    -- Пульсация размера billboard — дышит как живой
+    task.spawn(function()
+        while ent and ent.Parent do
+            TweenService:Create(bgui, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(6, 0, 8.5, 0)
+            }):Play()
+            task.wait(1.2)
+            TweenService:Create(bgui, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
+                Size = UDim2.new(4.5, 0, 6.5, 0)
+            }):Play()
+            task.wait(1.2)
+        end
+    end)
+
     -- Footsteps
     task.spawn(function()
         while ent and ent.Parent do
@@ -670,15 +736,14 @@ local function SpawnPOR252M(reboundCount)
         end
     end)
 
-    -- Entity shakes ЖЁСТКО пока летит
+    -- Entity shakes ЖЁСТКО через поворот Part во все стороны
     task.spawn(function()
         while ent and ent.Parent do
-            local offset = Vector3.new(
-                (math.random() - 0.5) * 6,
-                (math.random() - 0.5) * 6,
-                (math.random() - 0.5) * 6
-            )
-            ent.CFrame = ent.CFrame * CFrame.new(offset)
+            local rx = math.rad((math.random()-0.5) * 60)
+            local rz = math.rad((math.random()-0.5) * 60)
+            TweenService:Create(ent, TweenInfo.new(0.02, Enum.EasingStyle.Linear), {
+                CFrame = ent.CFrame * CFrame.Angles(rx, 0, rz)
+            }):Play()
             task.wait(0.02)
         end
     end)

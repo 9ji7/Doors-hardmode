@@ -746,9 +746,23 @@ task.spawn(function()
                 closestName = e.Name
             end
 
-            -- Camera shake
-            if dist < Config.ShakeThreshold then
-                local shakeStr = math.clamp((Config.ShakeThreshold - dist) / Config.ShakeThreshold * 0.35, 0, 0.35)
+            -- Camera shake — разный радиус и сила для каждого энтити
+            local shakeRadius, shakeStrMax
+            if e.Name == Config.PM_Name then
+                shakeRadius = 100; shakeStrMax = 2.5
+            elseif e.Name == Config.RS_Name then
+                shakeRadius = 80;  shakeStrMax = 0.6
+            elseif e.Name == Config.IR_Name then
+                shakeRadius = 80;  shakeStrMax = 0.5
+            elseif e.Name == Config.CS_Name then
+                shakeRadius = 70;  shakeStrMax = 0.3
+            elseif e.Name == Config.DG_Name then
+                shakeRadius = 70;  shakeStrMax = 0.4
+            else
+                shakeRadius = 60;  shakeStrMax = 0.35
+            end
+            if dist < shakeRadius then
+                local shakeStr = math.clamp((shakeRadius - dist) / shakeRadius * shakeStrMax, 0, shakeStrMax)
                 ShakeCamera(shakeStr)
             end
 

@@ -80,6 +80,16 @@ local Config = {
     PM_Color     = Color3.fromRGB(0, 120, 255),
     PM_Hint      = "POR-252-M движется с огромной скоростью. Спрячься немедленно!",
 
+    -- XV-35
+    XV_Name      = "XV-35",
+    XV_Face      = "rbxthumb://type=Asset&id=87880354500320&w=420&h=420",
+    XV_Sound     = "rbxassetid://9125351660",
+    XV_Speed     = 150,
+    XV_Chance    = 100,
+    XV_KillRange = 120,
+    XV_Color     = Color3.fromRGB(0, 210, 220),
+    XV_Hint      = "XV-35 несётся сквозь коридоры. Стены — единственное что тебя спасёт!",
+
     KillRange       = 15,
     ShakeThreshold  = 60,
     HintThreshold   = 80,
@@ -802,6 +812,123 @@ local function SpawnPOR252M(reboundCount)
 end
 
 -- ============================================================
+-- JUMPSCARE: XV-35
+-- ============================================================
+local function XV35Jumpscare()
+    local sg = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+    sg.Name           = "XV35Jumpscare"
+    sg.ResetOnSpawn   = false
+    sg.DisplayOrder   = 999
+    local img = Instance.new("ImageLabel", sg)
+    img.Size              = UDim2.new(1, 0, 1, 0)
+    img.BackgroundColor3  = Color3.new(0, 0, 0)
+    img.BackgroundTransparency = 0
+    img.Image             = Config.XV_Face
+    img.ScaleType         = Enum.ScaleType.Fit
+    -- Быстро меняем цвет фона фиолетовый → красный → голубой
+    local colors = {
+        Color3.fromRGB(120, 0, 200),
+        Color3.fromRGB(220, 0, 0),
+        Color3.fromRGB(0, 210, 220),
+        Color3.fromRGB(200, 0, 150),
+        Color3.fromRGB(0, 180, 255),
+    }
+    local running = true
+    -- Рандомное движение/ротация/размер картинки
+    task.spawn(function()
+        while running do
+            img.Position = UDim2.new(
+                (math.random() - 0.5) * 0.4, 0,
+                (math.random() - 0.5) * 0.4, 0
+            )
+            img.Size = UDim2.new(
+                0.8 + math.random() * 0.6, 0,
+                0.8 + math.random() * 0.6, 0
+            )
+            img.Rotation = (math.random() - 0.5) * 40
+            img.BackgroundColor3 = colors[math.random(1, #colors)]
+            task.wait(0.05)
+        end
+    end)
+    task.wait(1)
+    running = false
+    sg:Destroy()
+end
+
+-- ============================================================
+-- SPAWN: XV-35
+-- ============================================================
+local function SpawnXV35()
+    local path = GetRooms()
+    if #path == 0 then return end
+
+    TryShowHint(Config.XV_Name, Config.XV_Hint, Config.XV_Color)
+
+    local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
+    local ent, bgui, img, sp = CreateEntity(Config.XV_Name, Config.XV_Face, 5, startPos)
+
+    -- Бирюзовый свет
+    local light = Instance.new("PointLight", sp)
+    light.Color      = Config.XV_Color
+    light.Range      = 60
+    light.Brightness = 12
+
+    AddParticles(sp, Config.XV_Color, 25)
+
+    -- Пульсирующие кольца (плоский цилиндр расходится и затухает)
+    task.spawn(function()
+        while ent and ent.Parent do
+            local ring = Instance.new("Part", EntityFolder)
+            ring.Shape       = Enum.PartType.Cylinder
+            ring.Size        = Vector3.new(0.3, 2, 2)
+            ring.Anchored    = true
+            ring.CanCollide  = false
+            ring.CastShadow  = false
+            ring.Transparency = 0.3
+            ring.Color       = Config.XV_Color
+            ring.Material    = Enum.Material.Neon
+            ring.CFrame      = ent.CFrame * CFrame.Angles(0, 0, math.rad(90))
+            TweenService:Create(ring, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Size        = Vector3.new(0.1, 18, 18),
+                Transparency = 1,
+            }):Play()
+            Debris:AddItem(ring, 0.85)
+            task.wait(0.5)
+        end
+    end)
+
+    -- Пульсация света
+    task.spawn(function()
+        while ent.Parent do
+            TweenService:Create(light, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 22 }):Play()
+            task.wait(0.3)
+            TweenService:Create(light, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 8 }):Play()
+            task.wait(0.3)
+        end
+    end)
+
+    -- Звук с distortion и эквалайзером
+    local snd = Instance.new("Sound", sp)
+    snd.SoundId       = Config.XV_Sound
+    snd.Volume        = 6
+    snd.PlaybackSpeed = 3
+    snd.Looped        = true
+    local dist = Instance.new("DistortionSoundEffect", snd)
+    dist.Level = 0.99
+    local eq = Instance.new("EqualizerSoundEffect", snd)
+    eq.HighGain = 10
+    eq.MidGain  = -9.8
+    eq.LowGain  = -11.6
+    snd:Play()
+
+    task.spawn(function()
+        MoveAlongPath(ent, path, Config.XV_Speed, false)
+        snd:Stop()
+        if ent.Parent then ent:Destroy() end
+    end)
+end
+
+-- ============================================================
 -- DAMAGE LOOP + EFFECTS
 -- ============================================================
 task.spawn(function()
@@ -855,6 +982,19 @@ task.spawn(function()
                     killed = true
                     hum:SetAttribute("DeathCause", e.Name)
                     hum.Health = 0
+                end
+            elseif e.Name == Config.XV_Name then
+                if dist < Config.XV_KillRange and not isHiding and CanSeePlayer(e, char) then
+                    if not KillDebounce then
+                        KillDebounce = true
+                        killed = true
+                        task.spawn(XV35Jumpscare)
+                        task.delay(0.5, function()
+                            hum:SetAttribute("DeathCause", e.Name)
+                            hum.Health = 0
+                        end)
+                        task.delay(3, function() KillDebounce = false end)
+                    end
                 end
             elseif e.Name == Config.DG_Name then
                 if dist < Config.DG_KillRange and not isHiding and CanSeePlayer(e, char) then
@@ -950,6 +1090,11 @@ task.spawn(function()
                 SpawnRedSmile(Config.RS_Rebounds, val)
             end
         end)
+
+        -- XV-35
+        if SyncedRandom(val, 6) <= Config.XV_Chance * earlyMult then
+            task.spawn(function() SpawnXV35() end)
+        end
     end)
 end)
 
@@ -968,4 +1113,4 @@ LocalPlayer.CharacterAdded:Connect(function()
     HintShown    = {}
 end)
 
-print("Craziness Mod v2.2 LOADED! 🌑🔴🌀🦌💙")
+print("Craziness Mod v2.2 LOADED! 🌑🔴🌀🦌💙🩵")

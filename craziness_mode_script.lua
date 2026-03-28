@@ -503,7 +503,6 @@ local function SpawnCommonSense(reboundCount, roomNum)
 
     PlaySound(Config.CS_Warn, 5, workspace)
     TryShowHint(Config.CS_Name, Config.CS_Hint, Config.CS_Color)
-    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
     local ent, bgui, img, sp = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
@@ -530,6 +529,7 @@ local function SpawnCommonSense(reboundCount, roomNum)
     local loop = PlaySound(Config.CS_Fly, 8, sp, true)
 
     task.spawn(function()
+        task.wait(3)
         for _ = 1, reboundCount do
             MoveAlongPath(ent, path, Config.CS_Speed, false, 2)
             if not ent.Parent then break end
@@ -552,7 +552,6 @@ local function SpawnRedSmile(reboundCount, roomNum)
 
     PlaySound(Config.RS_Far, 4, workspace)
     TryShowHint(Config.RS_Name, Config.RS_Hint, Config.RS_Color)
-    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
     local ent, bgui, img, sp = CreateEntity(Config.RS_Name, Config.RS_Face, 6, startPos)
@@ -576,6 +575,7 @@ local function SpawnRedSmile(reboundCount, roomNum)
     local loop = PlaySound(Config.RS_Near, 10, ent, true)
 
     task.spawn(function()
+        task.wait(3)
         for _ = 1, reboundCount do
             MoveAlongPath(ent, path, Config.RS_Speed, false)
             if not ent.Parent then break end
@@ -747,10 +747,8 @@ local function SpawnPOR252M(reboundCount)
     local path = GetRooms()
     if #path == 0 then return end
 
-    -- Warning sound
     PlaySound(Config.PM_Warn, 6, workspace)
     TryShowHint(Config.PM_Name, Config.PM_Hint, Config.PM_Color)
-    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
     local ent, bgui, img, sp = CreateEntity(Config.PM_Name, Config.PM_Face, 6, startPos)
@@ -778,6 +776,7 @@ local function SpawnPOR252M(reboundCount)
     local nearSound = PlaySound(Config.PM_Near, 0, sp, true)
 
     task.spawn(function()
+        task.wait(3)
         for _ = 1, reboundCount do
             -- Forward
             MoveAlongPath(ent, path, Config.PM_Speed, false)
@@ -870,18 +869,57 @@ local function SpawnXV35()
     if #path == 0 then return end
 
     TryShowHint(Config.XV_Name, Config.XV_Hint, Config.XV_Color)
-    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
     local ent, bgui, img, sp = CreateEntity(Config.XV_Name, Config.XV_Face, 5, startPos)
 
+    -- RushNew — основной контролируемый Part внутри энтити
+    local RushNew = Instance.new("Part", ent)
+    RushNew.Name        = "RushNew"
+    RushNew.Size        = Vector3.new(5, 5, 5)
+    RushNew.Transparency = 1
+    RushNew.Anchored    = false
+    RushNew.CanCollide  = false
+    RushNew.CastShadow  = false
+    RushNew.Massless    = true
+    local rushWeld = Instance.new("WeldConstraint", ent)
+    rushWeld.Part0 = ent
+    rushWeld.Part1 = RushNew
+
     -- Бирюзовый свет
-    local light = Instance.new("PointLight", sp)
+    local light = Instance.new("PointLight", RushNew)
     light.Color      = Config.XV_Color
     light.Range      = 60
     light.Brightness = 12
 
-    AddParticles(sp, Config.XV_Color, 25)
+    -- Рандомный ротейт RushNew
+    task.spawn(function()
+        while ent and ent.Parent do
+            local rx = math.rad(math.random(0, 360))
+            local ry = math.rad(math.random(0, 360))
+            local rz = math.rad(math.random(0, 360))
+            TweenService:Create(RushNew, TweenInfo.new(0.15, Enum.EasingStyle.Linear), {
+                CFrame = ent.CFrame * CFrame.Angles(rx, ry, rz)
+            }):Play()
+            task.wait(0.15)
+        end
+    end)
+
+    -- Тряска камеры влево-вправо И вверх-вниз (сильная)
+    task.spawn(function()
+        while ent and ent.Parent do
+            local char = LocalPlayer.Character
+            local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                local dist = (ent.Position - hrp.Position).Magnitude
+                if dist < 120 then
+                    local str = math.clamp((120 - dist) / 120 * 1.8, 0, 1.8)
+                    shakeMag = math.max(shakeMag, str)
+                end
+            end
+            task.wait(0.05)
+        end
+    end)
 
     -- Пульсирующие кольца
     task.spawn(function()
@@ -931,6 +969,7 @@ local function SpawnXV35()
 
     -- 2 ребаунда → фейк деспавн → 10 сек → 3 ребаунда
     task.spawn(function()
+        task.wait(3)
         for _ = 1, 2 do
             MoveAlongPath(ent, path, Config.XV_Speed, false)
             if not ent.Parent then return end

@@ -390,12 +390,22 @@ local function ShakeEntity(bgui, strengthX, strengthY, interval)
     task.spawn(function()
         local parent = bgui.Parent
         while parent and parent.Parent do
-            bgui.StudsOffsetWorldSpace = Vector3.new(
-                (math.random()-0.5) * 2 * strengthX,
-                (math.random()-0.5) * 2 * strengthY,
-                0
-            )
-            task.wait(interval)
+            local ox = (math.random()-0.5) * 2 * strengthX
+            local oy = (math.random()-0.5) * 2 * strengthY
+            -- Плавно интерполируем к новой позиции
+            local steps = math.max(1, math.floor(interval / 0.016))
+            local curX = bgui.StudsOffsetWorldSpace.X
+            local curY = bgui.StudsOffsetWorldSpace.Y
+            for i = 1, steps do
+                if not parent.Parent then break end
+                local t = i / steps
+                bgui.StudsOffsetWorldSpace = Vector3.new(
+                    curX + (ox - curX) * t,
+                    curY + (oy - curY) * t,
+                    0
+                )
+                task.wait(0.016)
+            end
         end
         if bgui and bgui.Parent then
             bgui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
@@ -566,7 +576,7 @@ local function SpawnRedSmile(reboundCount, roomNum)
     light.Brightness = 12
 
     AddParticles(sp, Config.RS_Color, 30)
-    ShakeEntity(bgui, 0.4, 0.2, 0.06) -- влево-вправо средняя
+    ShakeEntity(bgui, 1.2, 0.8, 0.06) -- RS влево-вправо сильная
 
     task.spawn(function()
         while ent.Parent do
@@ -626,7 +636,7 @@ local function SpawnInvertedRebound(isFirst)
     local ent, bgui, img, sp = CreateEntity(Config.IR_Name, Config.IR_Face, 5, startPos)
 
     AddParticles(sp, Config.IR_Color, 35)
-    ShakeEntity(bgui, 0.5, 0.4, 0.05) -- все стороны агрессивная
+    ShakeEntity(bgui, 1.8, 1.5, 0.05) -- IR все стороны агрессивная
 
     task.spawn(function()
         while ent.Parent do
@@ -767,7 +777,7 @@ local function SpawnPOR252M(reboundCount)
 
     -- Blue particles
     AddParticles(sp, Config.PM_Color, 40)
-    ShakeEntity(bgui, 1.0, 0.8, 0.02) -- жёсткая
+    ShakeEntity(bgui, 3.0, 2.5, 0.02) -- PM жёсткая
 
     -- Pulsing light
     task.spawn(function()
@@ -900,7 +910,7 @@ local function SpawnXV35()
     light.Brightness = 12
 
     -- Тряска billboard через StudsOffsetWorldSpace
-    ShakeEntity(bgui, 0.6, 0.4, 0.05)
+    ShakeEntity(bgui, 2.0, 1.6, 0.05) -- XV сильная
 
     -- Пульсация света
     task.spawn(function()
@@ -940,33 +950,29 @@ local function SpawnXV35()
         end
     end)
 
-    -- Кольцо через BillboardGui — всегда смотрит на камеру, пульсирует
-    local ringGui = Instance.new("BillboardGui", ent)
-    ringGui.Size        = UDim2.new(8, 0, 8, 0)
-    ringGui.AlwaysOnTop = false
-    ringGui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
-    local ringImg = Instance.new("ImageLabel", ringGui)
-    ringImg.Size                   = UDim2.new(1, 0, 1, 0)
-    ringImg.BackgroundTransparency = 1
-    ringImg.Image                  = "rbxassetid://6193806121" -- белое кольцо
-    ringImg.ImageColor3            = Config.XV_Color
-    ringImg.ImageTransparency      = 0.2
-
-    -- Пульсация кольца
-    task.spawn(function()
-        while ent and ent.Parent do
-            TweenService:Create(ringGui, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-                Size = UDim2.new(14, 0, 14, 0)
-            }):Play()
-            TweenService:Create(ringImg, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-                ImageTransparency = 1
-            }):Play()
-            task.wait(0.5)
-            ringGui.Size = UDim2.new(4, 0, 4, 0)
-            ringImg.ImageTransparency = 0.2
-            task.wait(0.1)
-        end
-    end)
+    -- Кольцо через ParticleEmitter — спавнится внутри, расширяется и исчезает
+    local attach = Instance.new("Attachment", ent)
+    local ringEmitter = Instance.new("ParticleEmitter", attach)
+    ringEmitter.Texture        = "rbxassetid://2763450508"
+    ringEmitter.Color          = ColorSequence.new(Config.XV_Color)
+    ringEmitter.LightEmission  = 1
+    ringEmitter.LightInfluence = 0
+    ringEmitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.5, 8),
+        NumberSequenceKeypoint.new(1, 16),
+    })
+    ringEmitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(0.6, 0.3),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    ringEmitter.Lifetime    = NumberRange.new(1.2, 1.2)
+    ringEmitter.Rate        = 2
+    ringEmitter.Speed       = NumberRange.new(0, 0)
+    ringEmitter.SpreadAngle = Vector2.new(0, 0)
+    ringEmitter.Rotation    = NumberRange.new(0, 0)
+    ringEmitter.RotSpeed    = NumberRange.new(0, 0)
     -- Пульсация света
     task.spawn(function()
         while ent.Parent do

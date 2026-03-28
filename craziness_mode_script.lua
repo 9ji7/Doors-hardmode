@@ -503,7 +503,7 @@ local function SpawnCommonSense(reboundCount, roomNum)
 
     PlaySound(Config.CS_Warn, 5, workspace)
     TryShowHint(Config.CS_Name, Config.CS_Hint, Config.CS_Color)
-    task.wait(2.5)
+    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 2, 0)
     local ent, bgui, img, sp = CreateEntity(Config.CS_Name, Config.CS_Face, 5, startPos)
@@ -552,7 +552,7 @@ local function SpawnRedSmile(reboundCount, roomNum)
 
     PlaySound(Config.RS_Far, 4, workspace)
     TryShowHint(Config.RS_Name, Config.RS_Hint, Config.RS_Color)
-    task.wait(1.5)
+    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
     local ent, bgui, img, sp = CreateEntity(Config.RS_Name, Config.RS_Face, 6, startPos)
@@ -750,7 +750,7 @@ local function SpawnPOR252M(reboundCount)
     -- Warning sound
     PlaySound(Config.PM_Warn, 6, workspace)
     TryShowHint(Config.PM_Name, Config.PM_Hint, Config.PM_Color)
-    task.wait(2)
+    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
     local ent, bgui, img, sp = CreateEntity(Config.PM_Name, Config.PM_Face, 6, startPos)
@@ -819,13 +819,23 @@ local function XV35Jumpscare()
     sg.Name           = "XV35Jumpscare"
     sg.ResetOnSpawn   = false
     sg.DisplayOrder   = 999
-    local img = Instance.new("ImageLabel", sg)
-    img.Size              = UDim2.new(1, 0, 1, 0)
-    img.BackgroundColor3  = Color3.new(0, 0, 0)
-    img.BackgroundTransparency = 0
-    img.Image             = Config.XV_Face
-    img.ScaleType         = Enum.ScaleType.Fit
-    -- Быстро меняем цвет фона фиолетовый → красный → голубой
+    sg.IgnoreGuiInset = true
+
+    -- Фон фиксированный на весь экран
+    local bg = Instance.new("Frame", sg)
+    bg.Size              = UDim2.new(1, 0, 1, 0)
+    bg.Position          = UDim2.new(0, 0, 0, 0)
+    bg.BorderSizePixel   = 0
+    bg.BackgroundColor3  = Color3.fromRGB(120, 0, 200)
+
+    -- Картинка поверх фона
+    local img = Instance.new("ImageLabel", bg)
+    img.Size                   = UDim2.new(1, 0, 1, 0)
+    img.Position               = UDim2.new(0, 0, 0, 0)
+    img.BackgroundTransparency = 1
+    img.Image                  = Config.XV_Face
+    img.ScaleType              = Enum.ScaleType.Fit
+
     local colors = {
         Color3.fromRGB(120, 0, 200),
         Color3.fromRGB(220, 0, 0),
@@ -834,20 +844,17 @@ local function XV35Jumpscare()
         Color3.fromRGB(0, 180, 255),
     }
     local running = true
-    -- Рандомное движение/ротация/размер картинки
     task.spawn(function()
         while running do
+            -- Картинка рандомно крутится и меняет размер (быстро)
+            img.Size     = UDim2.new(0.7 + math.random() * 0.6, 0, 0.7 + math.random() * 0.6, 0)
             img.Position = UDim2.new(
-                (math.random() - 0.5) * 0.4, 0,
-                (math.random() - 0.5) * 0.4, 0
+                0.5 - img.Size.X.Scale/2 + (math.random()-0.5)*0.1, 0,
+                0.5 - img.Size.Y.Scale/2 + (math.random()-0.5)*0.1, 0
             )
-            img.Size = UDim2.new(
-                0.8 + math.random() * 0.6, 0,
-                0.8 + math.random() * 0.6, 0
-            )
-            img.Rotation = (math.random() - 0.5) * 40
-            img.BackgroundColor3 = colors[math.random(1, #colors)]
-            task.wait(0.05)
+            img.Rotation         = (math.random()-0.5) * 60
+            bg.BackgroundColor3  = colors[math.random(1, #colors)]
+            task.wait(0.02)
         end
     end)
     task.wait(1)
@@ -863,6 +870,7 @@ local function SpawnXV35()
     if #path == 0 then return end
 
     TryShowHint(Config.XV_Name, Config.XV_Hint, Config.XV_Color)
+    task.wait(3)
 
     local startPos = GetRoomNode(path[1]) + Vector3.new(0, 5, 0)
     local ent, bgui, img, sp = CreateEntity(Config.XV_Name, Config.XV_Face, 5, startPos)
@@ -875,21 +883,21 @@ local function SpawnXV35()
 
     AddParticles(sp, Config.XV_Color, 25)
 
-    -- Пульсирующие кольца (плоский цилиндр расходится и затухает)
+    -- Пульсирующие кольца
     task.spawn(function()
         while ent and ent.Parent do
             local ring = Instance.new("Part", EntityFolder)
-            ring.Shape       = Enum.PartType.Cylinder
-            ring.Size        = Vector3.new(0.3, 2, 2)
-            ring.Anchored    = true
-            ring.CanCollide  = false
-            ring.CastShadow  = false
+            ring.Shape        = Enum.PartType.Cylinder
+            ring.Size         = Vector3.new(0.3, 2, 2)
+            ring.Anchored     = true
+            ring.CanCollide   = false
+            ring.CastShadow   = false
             ring.Transparency = 0.3
-            ring.Color       = Config.XV_Color
-            ring.Material    = Enum.Material.Neon
-            ring.CFrame      = ent.CFrame * CFrame.Angles(0, 0, math.rad(90))
+            ring.Color        = Config.XV_Color
+            ring.Material     = Enum.Material.Neon
+            ring.CFrame       = ent.CFrame * CFrame.Angles(0, 0, math.rad(90))
             TweenService:Create(ring, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size        = Vector3.new(0.1, 18, 18),
+                Size         = Vector3.new(0.1, 18, 18),
                 Transparency = 1,
             }):Play()
             Debris:AddItem(ring, 0.85)
@@ -907,24 +915,56 @@ local function SpawnXV35()
         end
     end)
 
-    -- Звук с distortion и эквалайзером
+    -- Звук
     local snd = Instance.new("Sound", sp)
     snd.SoundId       = Config.XV_Sound
     snd.Volume        = 6
     snd.PlaybackSpeed = 3
     snd.Looped        = true
-    local dist = Instance.new("DistortionSoundEffect", snd)
-    dist.Level = 0.99
+    local distEff = Instance.new("DistortionSoundEffect", snd)
+    distEff.Level = 0.99
     local eq = Instance.new("EqualizerSoundEffect", snd)
     eq.HighGain = 10
     eq.MidGain  = -9.8
     eq.LowGain  = -11.6
     snd:Play()
 
+    -- 2 ребаунда → фейк деспавн → 10 сек → 3 ребаунда
     task.spawn(function()
-        MoveAlongPath(ent, path, Config.XV_Speed, false)
+        for _ = 1, 2 do
+            MoveAlongPath(ent, path, Config.XV_Speed, false)
+            if not ent.Parent then return end
+            MoveAlongPath(ent, path, Config.XV_Speed, true)
+            if not ent.Parent then return end
+        end
+
+        -- Фейк деспавн
+        snd:Stop()
+        ent.Parent = nil
+        sp.Parent  = nil
+
+        task.wait(10)
+
+        -- Возвращаем
+        local newPath = GetRooms()
+        if #newPath == 0 then return end
+        local newPos = GetRoomNode(newPath[1]) + Vector3.new(0, 5, 0)
+        ent.CFrame = CFrame.new(newPos)
+        sp.CFrame  = CFrame.new(newPos)
+        ent.Parent = EntityFolder
+        sp.Parent  = EntityFolder
+        snd:Play()
+
+        for _ = 1, 3 do
+            MoveAlongPath(ent, newPath, Config.XV_Speed, false)
+            if not ent.Parent then return end
+            MoveAlongPath(ent, newPath, Config.XV_Speed, true)
+            if not ent.Parent then return end
+        end
+
         snd:Stop()
         if ent.Parent then ent:Destroy() end
+        if sp.Parent  then sp:Destroy()  end
     end)
 end
 

@@ -357,11 +357,11 @@ end
 
 -- ============================================================
 -- CREATE ENTITY HELPER
--- mainPart — двигается по комнатам (невидимый)
--- shakePart — трясётся, на нём billboard и эффекты
+-- ent — основной Part, двигается и содержит все эффекты
+-- тряска через BillboardGui.StudsOffsetWorldSpace
+-- sp возвращается как ent для совместимости
 -- ============================================================
 local function CreateEntity(name, face, size, startPos)
-    -- Основной Part — только для движения
     local ent = Instance.new("Part", EntityFolder)
     ent.Name         = name
     ent.Size         = Vector3.new(size, size, size)
@@ -371,32 +371,34 @@ local function CreateEntity(name, face, size, startPos)
     ent.CastShadow   = false
     ent.CFrame       = CFrame.new(startPos)
 
-    -- Shake Part — прикреплён к основному через Weld
-    local sp = Instance.new("Part", EntityFolder)
-    sp.Name         = name .. "_shake"
-    sp.Size         = Vector3.new(size, size, size)
-    sp.Transparency = 1
-    sp.Anchored     = false
-    sp.CanCollide   = false
-    sp.CastShadow   = false
-    sp.CFrame       = CFrame.new(startPos)
-    sp.Massless     = true
-
-    local weld = Instance.new("WeldConstraint", ent)
-    weld.Part0 = ent
-    weld.Part1 = sp
-
-    -- Billboard на shakePart
-    local bgui = Instance.new("BillboardGui", sp)
-    bgui.Size        = UDim2.new(size * 2, 0, size * 2, 0)
-    bgui.AlwaysOnTop = false
+    local bgui = Instance.new("BillboardGui", ent)
+    bgui.Size               = UDim2.new(size * 2, 0, size * 2, 0)
+    bgui.AlwaysOnTop        = false
+    bgui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
 
     local img = Instance.new("ImageLabel", bgui)
     img.Size                   = UDim2.new(1, 0, 1, 0)
     img.Image                  = face
     img.BackgroundTransparency = 1
 
-    return ent, bgui, img, sp
+    -- sp = ent для совместимости со всем кодом ниже
+    return ent, bgui, img, ent
+end
+
+-- Функция тряски энтити через StudsOffsetWorldSpace
+local function ShakeEntity(bgui, strengthX, strengthY, interval)
+    task.spawn(function()
+        local adornee = bgui.Adornee or bgui.Parent
+        while adornee and adornee.Parent do
+            bgui.StudsOffsetWorldSpace = Vector3.new(
+                (math.random()-0.5) * 2 * strengthX,
+                (math.random()-0.5) * 2 * strengthY,
+                0
+            )
+            task.wait(interval)
+        end
+        bgui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
+    end)
 end
 
 -- ============================================================
@@ -562,6 +564,7 @@ local function SpawnRedSmile(reboundCount, roomNum)
     light.Brightness = 12
 
     AddParticles(sp, Config.RS_Color, 30)
+    ShakeEntity(bgui, 0.4, 0.2, 0.06) -- влево-вправо средняя
 
     task.spawn(function()
         while ent.Parent do
@@ -621,6 +624,7 @@ local function SpawnInvertedRebound(isFirst)
     local ent, bgui, img, sp = CreateEntity(Config.IR_Name, Config.IR_Face, 5, startPos)
 
     AddParticles(sp, Config.IR_Color, 35)
+    ShakeEntity(bgui, 0.5, 0.4, 0.05) -- все стороны агрессивная
 
     task.spawn(function()
         while ent.Parent do
@@ -761,6 +765,7 @@ local function SpawnPOR252M(reboundCount)
 
     -- Blue particles
     AddParticles(sp, Config.PM_Color, 40)
+    ShakeEntity(bgui, 1.0, 0.8, 0.02) -- жёсткая
 
     -- Pulsing light
     task.spawn(function()
@@ -875,37 +880,49 @@ local function SpawnXV35()
 
     -- RushNew — основной контролируемый Part внутри энтити
     local RushNew = Instance.new("Part", ent)
-    RushNew.Name        = "RushNew"
-    RushNew.Size        = Vector3.new(5, 5, 5)
+    RushNew.Name         = "RushNew"
+    RushNew.Size         = Vector3.new(5, 5, 5)
     RushNew.Transparency = 1
-    RushNew.Anchored    = false
-    RushNew.CanCollide  = false
-    RushNew.CastShadow  = false
-    RushNew.Massless    = true
+    RushNew.Anchored     = false
+    RushNew.CanCollide   = false
+    RushNew.CastShadow   = false
+    RushNew.Massless     = true
     local rushWeld = Instance.new("WeldConstraint", ent)
     rushWeld.Part0 = ent
     rushWeld.Part1 = RushNew
 
-    -- Бирюзовый свет
-    local light = Instance.new("PointLight", RushNew)
+    -- Свет на основном Part (работает надёжно)
+    local light = Instance.new("PointLight", ent)
     light.Color      = Config.XV_Color
     light.Range      = 60
     light.Brightness = 12
 
-    -- Рандомный ротейт RushNew
+    -- Тряска billboard через StudsOffsetWorldSpace
+    ShakeEntity(bgui, 0.6, 0.4, 0.05)
+
+    -- Пульсация света
     task.spawn(function()
-        while ent and ent.Parent do
-            local rx = math.rad(math.random(0, 360))
-            local ry = math.rad(math.random(0, 360))
-            local rz = math.rad(math.random(0, 360))
-            TweenService:Create(RushNew, TweenInfo.new(0.15, Enum.EasingStyle.Linear), {
-                CFrame = ent.CFrame * CFrame.Angles(rx, ry, rz)
-            }):Play()
-            task.wait(0.15)
+        while ent.Parent do
+            TweenService:Create(light, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 22 }):Play()
+            task.wait(0.3)
+            TweenService:Create(light, TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), { Brightness = 8 }):Play()
+            task.wait(0.3)
         end
     end)
 
-    -- Тряска камеры влево-вправо И вверх-вниз (сильная)
+    -- Рандомный ротейт RushNew
+    task.spawn(function()
+        while ent and ent.Parent do
+            RushNew.CFrame = ent.CFrame * CFrame.Angles(
+                math.rad(math.random(0, 360)),
+                math.rad(math.random(0, 360)),
+                math.rad(math.random(0, 360))
+            )
+            task.wait(0.1)
+        end
+    end)
+
+    -- Тряска камеры
     task.spawn(function()
         while ent and ent.Parent do
             local char = LocalPlayer.Character
@@ -921,40 +938,28 @@ local function SpawnXV35()
         end
     end)
 
-    -- Тряска картинки влево-вправо через позицию ImageLabel
-    task.spawn(function()
-        while ent and ent.Parent do
-            img.Position = UDim2.new(0.5 + (math.random()-0.5)*0.15, 0, 0.5 + (math.random()-0.5)*0.08, 0)
-            img.AnchorPoint = Vector2.new(0.5, 0.5)
-            task.wait(0.05)
-        end
-        img.Position = UDim2.new(0.5, 0, 0.5, 0)
-    end)
-
-    -- Пульсирующее кольцо через ParticleEmitter (всегда смотрит на камеру)
-    local attach = Instance.new("Attachment", sp)
+    -- Кольцо через ParticleEmitter на Attachment
+    local attach = Instance.new("Attachment", ent)
     local ringEmitter = Instance.new("ParticleEmitter", attach)
-    ringEmitter.Texture      = "rbxassetid://6772783189" -- кольцо/ring текстура
+    ringEmitter.Texture      = "rbxassetid://6772783189"
     ringEmitter.Color        = ColorSequence.new(Config.XV_Color)
-    ringEmitter.Size         = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0),
-        NumberSequenceKeypoint.new(0.3, 6),
-        NumberSequenceKeypoint.new(1, 12),
-    })
-    ringEmitter.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.2),
-        NumberSequenceKeypoint.new(0.7, 0.5),
-        NumberSequenceKeypoint.new(1, 1),
-    })
     ringEmitter.LightEmission  = 1
     ringEmitter.LightInfluence = 0
-    ringEmitter.Lifetime       = NumberRange.new(0.8, 0.8)
-    ringEmitter.Rate           = 2
-    ringEmitter.Speed          = NumberRange.new(0, 0)
-    ringEmitter.SpreadAngle    = Vector2.new(0, 0)
-    ringEmitter.Rotation       = NumberRange.new(0, 360)
-    ringEmitter.RotSpeed       = NumberRange.new(0, 0)
-
+    ringEmitter.Size = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 2),
+        NumberSequenceKeypoint.new(0.5, 8),
+        NumberSequenceKeypoint.new(1, 14),
+    })
+    ringEmitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.1),
+        NumberSequenceKeypoint.new(0.6, 0.5),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    ringEmitter.Lifetime    = NumberRange.new(0.9, 0.9)
+    ringEmitter.Rate        = 2
+    ringEmitter.Speed       = NumberRange.new(0, 0)
+    ringEmitter.SpreadAngle = Vector2.new(0, 0)
+    ringEmitter.Rotation    = NumberRange.new(0, 360)
     -- Пульсация света
     task.spawn(function()
         while ent.Parent do

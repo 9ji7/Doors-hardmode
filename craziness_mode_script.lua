@@ -921,27 +921,39 @@ local function SpawnXV35()
         end
     end)
 
-    -- Пульсирующие кольца
+    -- Тряска картинки влево-вправо через позицию ImageLabel
     task.spawn(function()
         while ent and ent.Parent do
-            local ring = Instance.new("Part", EntityFolder)
-            ring.Shape        = Enum.PartType.Cylinder
-            ring.Size         = Vector3.new(0.3, 2, 2)
-            ring.Anchored     = true
-            ring.CanCollide   = false
-            ring.CastShadow   = false
-            ring.Transparency = 0.3
-            ring.Color        = Config.XV_Color
-            ring.Material     = Enum.Material.Neon
-            ring.CFrame       = ent.CFrame * CFrame.Angles(0, 0, math.rad(90))
-            TweenService:Create(ring, TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Size         = Vector3.new(0.1, 18, 18),
-                Transparency = 1,
-            }):Play()
-            Debris:AddItem(ring, 0.85)
-            task.wait(0.5)
+            img.Position = UDim2.new(0.5 + (math.random()-0.5)*0.15, 0, 0.5 + (math.random()-0.5)*0.08, 0)
+            img.AnchorPoint = Vector2.new(0.5, 0.5)
+            task.wait(0.05)
         end
+        img.Position = UDim2.new(0.5, 0, 0.5, 0)
     end)
+
+    -- Пульсирующее кольцо через ParticleEmitter (всегда смотрит на камеру)
+    local attach = Instance.new("Attachment", sp)
+    local ringEmitter = Instance.new("ParticleEmitter", attach)
+    ringEmitter.Texture      = "rbxassetid://6772783189" -- кольцо/ring текстура
+    ringEmitter.Color        = ColorSequence.new(Config.XV_Color)
+    ringEmitter.Size         = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(0.3, 6),
+        NumberSequenceKeypoint.new(1, 12),
+    })
+    ringEmitter.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.2),
+        NumberSequenceKeypoint.new(0.7, 0.5),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    ringEmitter.LightEmission  = 1
+    ringEmitter.LightInfluence = 0
+    ringEmitter.Lifetime       = NumberRange.new(0.8, 0.8)
+    ringEmitter.Rate           = 2
+    ringEmitter.Speed          = NumberRange.new(0, 0)
+    ringEmitter.SpreadAngle    = Vector2.new(0, 0)
+    ringEmitter.Rotation       = NumberRange.new(0, 360)
+    ringEmitter.RotSpeed       = NumberRange.new(0, 0)
 
     -- Пульсация света
     task.spawn(function()
@@ -970,12 +982,15 @@ local function SpawnXV35()
     -- 2 ребаунда → фейк деспавн → 10 сек → 3 ребаунда
     task.spawn(function()
         task.wait(3)
-        for _ = 1, 2 do
-            MoveAlongPath(ent, path, Config.XV_Speed, false)
-            if not ent.Parent then return end
-            MoveAlongPath(ent, path, Config.XV_Speed, true)
-            if not ent.Parent then return end
-        end
+        -- 1 ребаунд = вперёд + назад
+        MoveAlongPath(ent, path, Config.XV_Speed, false)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, path, Config.XV_Speed, true)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, path, Config.XV_Speed, false)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, path, Config.XV_Speed, true)
+        if not ent.Parent then return end
 
         -- Фейк деспавн
         snd:Stop()
@@ -993,13 +1008,20 @@ local function SpawnXV35()
         ent.Parent = EntityFolder
         sp.Parent  = EntityFolder
         snd:Play()
+        task.wait(3)
 
-        for _ = 1, 3 do
-            MoveAlongPath(ent, newPath, Config.XV_Speed, false)
-            if not ent.Parent then return end
-            MoveAlongPath(ent, newPath, Config.XV_Speed, true)
-            if not ent.Parent then return end
-        end
+        MoveAlongPath(ent, newPath, Config.XV_Speed, false)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, newPath, Config.XV_Speed, true)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, newPath, Config.XV_Speed, false)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, newPath, Config.XV_Speed, true)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, newPath, Config.XV_Speed, false)
+        if not ent.Parent then return end
+        MoveAlongPath(ent, newPath, Config.XV_Speed, true)
+        if not ent.Parent then return end
 
         snd:Stop()
         if ent.Parent then ent:Destroy() end

@@ -388,8 +388,8 @@ end
 -- Функция тряски энтити через StudsOffsetWorldSpace
 local function ShakeEntity(bgui, strengthX, strengthY, interval)
     task.spawn(function()
-        local adornee = bgui.Adornee or bgui.Parent
-        while adornee and adornee.Parent do
+        local parent = bgui.Parent
+        while parent and parent.Parent do
             bgui.StudsOffsetWorldSpace = Vector3.new(
                 (math.random()-0.5) * 2 * strengthX,
                 (math.random()-0.5) * 2 * strengthY,
@@ -397,7 +397,9 @@ local function ShakeEntity(bgui, strengthX, strengthY, interval)
             )
             task.wait(interval)
         end
-        bgui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
+        if bgui and bgui.Parent then
+            bgui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
+        end
     end)
 end
 
@@ -938,28 +940,33 @@ local function SpawnXV35()
         end
     end)
 
-    -- Кольцо через ParticleEmitter на Attachment
-    local attach = Instance.new("Attachment", ent)
-    local ringEmitter = Instance.new("ParticleEmitter", attach)
-    ringEmitter.Texture      = "rbxassetid://6772783189"
-    ringEmitter.Color        = ColorSequence.new(Config.XV_Color)
-    ringEmitter.LightEmission  = 1
-    ringEmitter.LightInfluence = 0
-    ringEmitter.Size = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 2),
-        NumberSequenceKeypoint.new(0.5, 8),
-        NumberSequenceKeypoint.new(1, 14),
-    })
-    ringEmitter.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.1),
-        NumberSequenceKeypoint.new(0.6, 0.5),
-        NumberSequenceKeypoint.new(1, 1),
-    })
-    ringEmitter.Lifetime    = NumberRange.new(0.9, 0.9)
-    ringEmitter.Rate        = 2
-    ringEmitter.Speed       = NumberRange.new(0, 0)
-    ringEmitter.SpreadAngle = Vector2.new(0, 0)
-    ringEmitter.Rotation    = NumberRange.new(0, 360)
+    -- Кольцо через BillboardGui — всегда смотрит на камеру, пульсирует
+    local ringGui = Instance.new("BillboardGui", ent)
+    ringGui.Size        = UDim2.new(8, 0, 8, 0)
+    ringGui.AlwaysOnTop = false
+    ringGui.StudsOffsetWorldSpace = Vector3.new(0, 0, 0)
+    local ringImg = Instance.new("ImageLabel", ringGui)
+    ringImg.Size                   = UDim2.new(1, 0, 1, 0)
+    ringImg.BackgroundTransparency = 1
+    ringImg.Image                  = "rbxassetid://6193806121" -- белое кольцо
+    ringImg.ImageColor3            = Config.XV_Color
+    ringImg.ImageTransparency      = 0.2
+
+    -- Пульсация кольца
+    task.spawn(function()
+        while ent and ent.Parent do
+            TweenService:Create(ringGui, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+                Size = UDim2.new(14, 0, 14, 0)
+            }):Play()
+            TweenService:Create(ringImg, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+                ImageTransparency = 1
+            }):Play()
+            task.wait(0.5)
+            ringGui.Size = UDim2.new(4, 0, 4, 0)
+            ringImg.ImageTransparency = 0.2
+            task.wait(0.1)
+        end
+    end)
     -- Пульсация света
     task.spawn(function()
         while ent.Parent do

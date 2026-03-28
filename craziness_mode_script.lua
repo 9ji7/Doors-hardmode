@@ -502,10 +502,10 @@ local function SpawnCommonSense(reboundCount, roomNum)
 
     local smokes = {}
     local smokeSettings = {
-        {Size = 60, Opacity = 1,   RiseVelocity = 0},
-        {Size = 50, Opacity = 0.9, RiseVelocity = 1},
-        {Size = 45, Opacity = 1,   RiseVelocity = -1},
-        {Size = 55, Opacity = 0.9, RiseVelocity = 2},
+        {Size = 25, Opacity = 0.8, RiseVelocity = 0},
+        {Size = 20, Opacity = 0.7, RiseVelocity = 1},
+        {Size = 18, Opacity = 0.8, RiseVelocity = -1},
+        {Size = 22, Opacity = 0.7, RiseVelocity = 2},
     }
     for _, s in ipairs(smokeSettings) do
         local smoke = Instance.new("Smoke", sp)

@@ -85,7 +85,7 @@ local Config = {
     XV_Face      = "rbxthumb://type=Asset&id=87880354500320&w=420&h=420",
     XV_Sound     = "rbxassetid://9125351660",
     XV_Speed     = 150,
-    XV_Chance    = 100,
+    XV_Chance    = 20,
     XV_KillRange = 120,
     XV_Color     = Color3.fromRGB(0, 210, 220),
     XV_Hint      = "XV-35 несётся сквозь коридоры. Стены — единственное что тебя спасёт!",

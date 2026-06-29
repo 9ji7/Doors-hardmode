@@ -622,6 +622,7 @@ local function SpawnInvertedRebound(isFirst)
         TryShowHint(Config.IR_Name, Config.IR_Hint, Config.IR_Color)
         -- Rebound visual effect (black‑and‑white + 3 s shake)
         ShakeCamera(6)
+        task.delay(3, function() ShakeCamera(0) end)
         -- Gradually reduce shake over 3 seconds
         task.spawn(function()
             local total = 3
@@ -636,7 +637,8 @@ local function SpawnInvertedRebound(isFirst)
         local reboundTween = TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(3, Enum.EasingStyle.Linear), { Saturation = -1, Contrast = 2, Brightness = -0.2 })
         reboundTween:Play()
         task.delay(3, function()
-            TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(1), { Saturation = 0, Contrast = 0.4, Brightness = 0 }).Play()
+            local resetTween = TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(1), { Saturation = 0, Contrast = 0.4, Brightness = 0 })
+            resetTween:Play()
         end)
         task.wait(5)
     else

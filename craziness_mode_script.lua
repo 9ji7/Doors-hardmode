@@ -27,7 +27,7 @@ local Config = {
     CS_Face     = "rbxthumb://type=Asset&id=17831829233&w=420&h=420",
     CS_Warn     = "rbxassetid://108716595659503",
     CS_Fly      = "rbxassetid://140617516722342",
-    CS_Speed    = 75,
+    CS_Speed    = 100, -- increased speed for Common Sense
     CS_Chance   = 15,
     CS_Color    = Color3.fromRGB(10, 10, 10),
     CS_Hint     = "Он не терпит спешки. Когда слышишь его гул — ищи убежище немедленно!",
@@ -38,10 +38,10 @@ local Config = {
     RS_Far       = "rbxassetid://9125351660",
     RS_Near      = "rbxassetid://133672210406470",
     RS_Jumpscare = "rbxassetid://130452258247912",
-    RS_Speed     = 125,
+    RS_Speed     = 150, -- increased speed for Red Smile
     RS_Chance    = 12,
     RS_Rebounds  = 3,
-    RS_KillRange = 45,
+    RS_KillRange = 60, -- increased kill range for Red Smile
     RS_Color     = Color3.fromRGB(220, 30, 0),
     RS_Hint      = "Красная Улыбка видит тебя издалека, но стены — твоя защита!",
 
@@ -51,9 +51,9 @@ local Config = {
     DG_Jumpscare = "rbxthumb://type=Asset&id=11394027278&w=420&h=420",
     DG_Ambient   = "rbxassetid://82890415629830",
     DG_Footstep  = "rbxassetid://134645629051473",
-    DG_Speed     = 22,
+    DG_Speed     = 30, -- increased speed for Deer God
     DG_Chance    = 7,
-    DG_KillRange = 30,
+    DG_KillRange = 45, -- increased kill range for Deer God
     DG_Color     = Color3.fromRGB(80, 160, 80),
     DG_Hint      = "Олений Бог движется медленно, но неотступно. Прячься и не смотри назад.",
 
@@ -63,7 +63,7 @@ local Config = {
     IR_Arrival = "rbxassetid://136836151370178",
     IR_Move    = "rbxassetid://103078219556352",
     IR_Chance  = 12,
-    IR_Speed   = 125,
+    IR_Speed   = 150, -- increased speed for Inverted Rebound
     IR_Color   = Color3.fromRGB(100, 0, 200),
     IR_Hint    = "Инверсия не терпит шкафов! Оставайся снаружи, пока реальность искажена.",
 
@@ -73,10 +73,10 @@ local Config = {
     PM_Warn      = "rbxassetid://139430154554631",
     PM_Far       = "rbxassetid://140440238391729",
     PM_Near      = "rbxassetid://137180766239401",
-    PM_Speed     = 175,
+    PM_Speed     = 210, -- increased speed for POR-252-M
     PM_Chance    = 5,
     PM_Rebounds  = 20,
-    PM_KillRange = 45,
+    PM_KillRange = 65, -- increased kill range for POR-252-M
     PM_Color     = Color3.fromRGB(0, 120, 255),
     PM_Hint      = "POR-252-M движется с огромной скоростью. Спрячься немедленно!",
 
@@ -84,13 +84,13 @@ local Config = {
     XV_Name      = "XV-35",
     XV_Face      = "rbxthumb://type=Asset&id=87880354500320&w=420&h=420",
     XV_Sound     = "rbxassetid://9125351660",
-    XV_Speed     = 150,
+    XV_Speed     = 180, -- increased speed for XV-35
     XV_Chance    = 20,
     XV_KillRange = 120,
     XV_Color     = Color3.fromRGB(0, 210, 220),
     XV_Hint      = "XV-35 несётся сквозь коридоры. Стены — единственное что тебя спасёт!",
 
-    KillRange       = 15,
+    KillRange       = 30, -- increased default kill range
     ShakeThreshold  = 60,
     HintThreshold   = 80,
     DamageTickRate  = 0.05,
@@ -144,7 +144,7 @@ SetupScreenEffects()
 
 local function UpdateScreenEffects(closestDist, closestName)
     local t = math.clamp(1 - closestDist / Config.ShakeThreshold, 0, 1)
-    TweenService:Create(ScreenEffects.Blur, TweenInfo.new(0.3), { Size = t * 8 }):Play()
+    TweenService:Create(ScreenEffects.Blur, TweenInfo.new(0.3), { Size = t * 12 }):Play()
     TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(0.3), {
         Saturation = -t * 0.7,
         Brightness = -t * 0.15,
@@ -620,6 +620,13 @@ local function SpawnInvertedRebound(isFirst)
     if isFirst then
         PlaySound(Config.IR_Arrival, 7, workspace)
         TryShowHint(Config.IR_Name, Config.IR_Hint, Config.IR_Color)
+        -- Rebound visual effect
+        ShakeCamera(6)
+        local reboundTween = TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(3, Enum.EasingStyle.Linear), { Saturation = -1, Contrast = 2 })
+        reboundTween:Play()
+        task.delay(3, function()
+            TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(1), { Saturation = 0, Contrast = 0.4 }):Play()
+        end)
         task.wait(5)
     else
         local ghost = Instance.new("Part", EntityFolder)

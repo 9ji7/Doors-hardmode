@@ -620,26 +620,18 @@ local function SpawnInvertedRebound(isFirst)
     if isFirst then
         PlaySound(Config.IR_Arrival, 7, workspace)
         TryShowHint(Config.IR_Name, Config.IR_Hint, Config.IR_Color)
-        -- Rebound visual effect (black‑and‑white + 3 s shake)
+        -- Simple shake on spawn (no gray/white effect)
+        -- Rebound visual effect (gray/white) and spawn shake
         ShakeCamera(6)
-        task.delay(3, function() ShakeCamera(0) end)
-        -- Gradually reduce shake over 3 seconds
-        task.spawn(function()
-            local total = 3
-            local step = 0.1
-            local elapsed = 0
-            while elapsed < total do
-                task.wait(step)
-                elapsed = elapsed + step
-            end
-            -- after 3 s the shake naturally decays via ShakeCamera implementation
-        end)
-        local reboundTween = TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(3, Enum.EasingStyle.Linear), { Saturation = -1, Contrast = 2, Brightness = -0.2 })
+        -- Gray‑and‑white effect using Lighting properties
+        local lighting = game:GetService("Lighting")
+        local reboundTween = TweenService:Create(lighting, TweenInfo.new(3, Enum.EasingStyle.Linear), { Brightness = -0.2, Contrast = 2 })
         reboundTween:Play()
         task.delay(3, function()
-            local resetTween = TweenService:Create(ScreenEffects.ColorCorr, TweenInfo.new(1), { Saturation = 0, Contrast = 0.4, Brightness = 0 })
+            local resetTween = TweenService:Create(lighting, TweenInfo.new(1), { Brightness = 0, Contrast = 0.4 })
             resetTween:Play()
         end)
+        task.delay(3, function() ShakeCamera(0) end)
         task.wait(5)
     else
         local ghost = Instance.new("Part", EntityFolder)
